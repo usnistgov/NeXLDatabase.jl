@@ -1,0 +1,6 @@
+CREATE TABLE LABORATORY (
+    pkey INTEGER PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    address TEXT,
+    contact TEXT
+);

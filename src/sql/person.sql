@@ -1,0 +1,5 @@
+CREATE TABLE PERSON (
+    ppkey INTEGER PRIMARY KEY NOT NULL,
+    pname TEXT NOT NULL,
+    pemail TEXT
+);
