@@ -19,13 +19,14 @@ function openDB(filename::AbstractString)::SQLite.DB
     end
     db = SQLite.DB(filename)
     existing = SQLite.tables(db)
+    println(existing)
     tables = (
         "material", "massfraction", #
         "sample", #
         # "person", "laboratory", "labmembers", "instrument", "edsdetector", "sample", "spectrum"
     )
     for tbl in tables
-        if !(uppercase(tbl) in existing)
+        if !(uppercase(tbl) in existing.name)
             buildTable(tbl)
             @info "Building table $(tbl)."
         end
