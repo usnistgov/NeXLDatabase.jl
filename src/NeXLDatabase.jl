@@ -7,7 +7,9 @@ using Dates
 using DataFrames
 using IntervalSets
 
-function openDB(filename::AbstractString)::SQLite.DB
+export openNeXLDatabase
+
+function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     function stripcomment(ss)
         i=findfirst("--",ss)
         return i == nothing ? ss : ss[1:i.start-1]
@@ -19,19 +21,22 @@ function openDB(filename::AbstractString)::SQLite.DB
     end
     db = SQLite.DB(filename)
     existing = SQLite.tables(db)
-    println(existing)
     tables = (
         "material", "massfraction", #
-        "sample", #
+        "person", "laboratory", "sample", #
+        "instrument", "detector", #
+        "spectrum",
         # "person", "laboratory", "labmembers", "instrument", "edsdetector", "sample", "spectrum"
     )
     for tbl in tables
-        if !(uppercase(tbl) in existing.name)
+        if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
             buildTable(tbl)
             @info "Building table $(tbl)."
         end
     end
     return db
 end
+
+include("material.jl")
 
 end # module
