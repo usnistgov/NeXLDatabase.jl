@@ -25,8 +25,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "material", "massfraction", #
         "person", "laboratory", "sample", #
         "instrument", "detector", #
-        "spectrum",
-        # "person", "laboratory", "labmembers", "instrument", "edsdetector", "sample", "spectrum"
+        "artifact", "spectrum",
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
