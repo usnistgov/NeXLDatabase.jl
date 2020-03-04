@@ -9,14 +9,17 @@ function has(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Bool
 end
 
 function Base.write(db::SQLite.DB, mat::Material)
+    res = -1
     SQLite.transaction(db) do
         stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY) VALUES ( ?, ?, ? );")
-        DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, 0.0)))
+        r = DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, missing)))
+        res = DBInterface.lastrowid(r)
         stmt2 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
         pkey = (DBInterface.execute(stmt2, (name(mat), )) |> DataFrame)[end,:PKEY]
         stmt3 = SQLite.Stmt(db, "INSERT INTO MASSFRACTION ( MATROWID, MFZ, MFC, MFUC, MFA ) VALUES ( ?, ?, ?, ?, ? )")
         foreach(elm->DBInterface.execute(stmt3, (pkey, z(elm), value(mat[elm]), σ(mat[elm]), get(mat.a, elm, 0.0))), keys(mat))
     end
+    return res
 end
 
 function Base.read(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Material
@@ -62,7 +65,7 @@ function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, Closed
         push!(cmds, "SELECT MATROWID FROM MASSFRACTION WHERE MFZ=? AND MFC>=? and MFC<=?")
         append!(args, [ z(elm), minimum(ci), maximum(ci) ])
     end
-    stmt = SQLite.Stmt(db, join(cmds," INTERSECT ")*";")
+    stmt = SQLite.Stmt(db, join(cmdsol," INTERSECT ")*";")
     df = DBInterface.execute(stmt, args) |> DataFrame
     res = String[]
     for row in eachrow(df)
