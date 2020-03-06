@@ -19,7 +19,7 @@ function Base.write(db::SQLite.DB, ::Type{DBSample}, owner::DBLabratory, name::S
     data = Mmap.mmap(filename, Vector{UInt8}, (stat(filename).size, ))
     stmt1 = SQLite.Stmt(db, "INSERT INTO SAMPLE ( OWNER, NAME, DESCRIPTION ) VALUES ( ?, ?, ? );")
     results = DBInterface.execute(stmt1, (owner.pkey, name, desc ))
-    return  DBInterface.lastrowid(results)
+    return  read(db, DBSample, convert(Int, DBInterface.lastrowid(results)))
 end
 
 function Base.read(db::SQLite, ::Type{DBSample}, pkey::Int)

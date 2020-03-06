@@ -40,7 +40,6 @@ include("material.jl")
 include("person.jl")
 include("laboratory.jl")
 include("instrument.jl")
-include("detector.jl")
 include("artifact.jl")
 
 export DBPerson

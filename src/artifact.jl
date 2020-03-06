@@ -33,3 +33,15 @@ function Base.read(db::SQLite, ::Type{DBArtifact}, pkey::Int)
     r=Row(q)
     return DBArtifact( r[:PKEY], r[:TYPE], r[:FORMAT], r[:FILENAME], r[:DATA] )
 end
+
+function Base.read(db::SQLite, ::Type{Spectrum}, pkey::Int)::Spectrum
+    art = read(db,DBArtifact,pkey)
+    if art.format=="EMSA"
+        return readEMSA(IOBuffer(art.data), Float64))
+    elif art.format=="ASPEX"
+        return readAspexTIFF(IOBuffer(art.data); withImgs=true)
+    else
+        error("Unknown spectrum format $(art.format).")
+end
+
+function Base.read(db::SQLite, ::Type{Image}, pkey::Int)::Image

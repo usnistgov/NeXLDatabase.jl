@@ -9,7 +9,7 @@ end
 function Base.write(db::SQLite.DB, ::Type{DBPerson}, name::String, email::String)::DBPerson
     stmt1 = SQLite.Stmt(db, "INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( ?, ? );")
     r = DBInterface.execute(stmt1, ( name, email ))
-    return DBPerson(DBInterface.lastrowid(r), name, email)
+    return read(db, DBPerson, convert(Int,DBInterface.lastrowid(r))
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBPerson}, pkey::Int)::DBPerson
