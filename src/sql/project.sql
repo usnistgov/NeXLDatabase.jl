@@ -4,3 +4,5 @@ CREATE TABLE PROJECT (
     NAME TEXT NOT NULL,
     DESCRIPTION TEXT
 );
+
+INSERT INTO PROJECT ( PARENT, NAME, DESCRIPTION ) VALUES ( -1, "K-ratio Project", "Community Consensus K-ratio Project");

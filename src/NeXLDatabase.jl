@@ -16,14 +16,17 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     end
     function buildTable(tbl)
         path = dirname(pathof(@__MODULE__))
-        cmd = reduce(*, map(stripcomment, readlines("$(path)/sql/$(tbl).sql")))
-        SQLite.execute(db, cmd)
+        cmds = reduce(*, map(stripcomment, readlines("$(path)/sql/$(tbl).sql")))
+        for cmd in strip.(split(cmds,";"))
+            if length(cmd)>0
+                SQLite.execute(db, cmd)
     end
     db = SQLite.DB(filename)
     existing = SQLite.tables(db)
     tables = (
         "material", "massfraction", #
-        "person", "laboratory", "sample", #
+        "person", "laboratory", "labmembers", #
+        "sample", "project", #
         "instrument", "detector", #
         "artifact", "spectrum",
     )
@@ -41,11 +44,13 @@ include("person.jl")
 include("laboratory.jl")
 include("instrument.jl")
 include("artifact.jl")
+include("spectrum.jl")
 
 export DBPerson
 export DBLaboratory
 export DBInstrument
 export DBDetector
 export DBArtifact
+export DBSpectrum
 
 end # module

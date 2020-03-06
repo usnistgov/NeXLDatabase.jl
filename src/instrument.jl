@@ -17,10 +17,10 @@ end
 #);
 
 
-function Base.write(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory, vendor::String, model::String, location::String)::DBInstrument
+function Base.write(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory, vendor::String, model::String, location::String)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO INSTRUMENT ( LABKEY, VENDOR, MODEL, LOCATION ) VALUES ( ?, ?, ?, ? );")
     r = DBInterface.execute(stmt1, ( lab.pkey, vendor, model, location ))
-    return read(db, DBInstrument, convert(Int,DBInterface.lastrowid(r)))
+    return DBInterface.lastrowid(r)
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBInstrument}, pkey::Int)::DBInstrument

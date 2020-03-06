@@ -3,3 +3,8 @@ CREATE TABLE PERSON (
     NAME TEXT NOT NULL,
     EMAIL TEXT NOT NULL
 );
+
+CREATE INDEX EMAIL_INDEX ON PERSON (EMAIL);
+
+INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( "Nicholas Ritchie", "nicholas.ritchie@nist.gov");
+INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( "Dale Newbury", "dale.newbury@nist.gov");

@@ -8,7 +8,7 @@ function has(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Bool
     return !SQLite.done(r)
 end
 
-function Base.write(db::SQLite.DB, mat::Material)
+function Base.write(db::SQLite.DB, mat::Material)::Int
     res = -1
     SQLite.transaction(db) do
         stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY) VALUES ( ?, ?, ? );")
@@ -16,42 +16,50 @@ function Base.write(db::SQLite.DB, mat::Material)
         res = DBInterface.lastrowid(r)
         stmt2 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
         pkey = (DBInterface.execute(stmt2, (name(mat), )) |> DataFrame)[end,:PKEY]
-        stmt3 = SQLite.Stmt(db, "INSERT INTO MASSFRACTION ( MATROWID, MFZ, MFC, MFUC, MFA ) VALUES ( ?, ?, ?, ?, ? )")
+        stmt3 = SQLite.Stmt(db, "INSERT INTO MASSFRACTION ( MATKEY, MFZ, MFC, MFUC, MFA ) VALUES ( ?, ?, ?, ?, ? )")
         foreach(elm->DBInterface.execute(stmt3, (pkey, z(elm), value(mat[elm]), σ(mat[elm]), get(mat.a, elm, 0.0))), keys(mat))
     end
     return res
 end
 
-function Base.read(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Material
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM MATERIAL WHERE MATNAME=?;")
-    r1 = DBInterface.execute(stmt1, (matname, ))
-    if SQLite.done(r1)
-        error("No known material named '$(matname)'.")
+function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
+    stmt1 = SQLite.Stmt(db, "SELECT * FROM MATERIAL WHERE PKEY=?;")
+    q1 = DBInterface.execute(stmt1, (pkey, ))
+    if SQLite.done(q1)
+        error("No known material with pkey = '$(pkey)'.")
     end
-    df1 = r1 |> DataFrame
-    row, den, desc = df1[end,:PKEY], df1[end,:MATDENSITY], df1[end,:MATDESCRIPTION]
-    stmt2 = SQLite.Stmt(db, "SELECT * FROM MASSFRACTION WHERE MATROWID=?;")
-    mfs = DBInterface.execute(stmt2, (row, )) |> DataFrame
+    r1 = Row(q1)
+    row, den, desc = r1[:PKEY], r1[:MATDENSITY], r1[:MATDESCRIPTION]
+    stmt2 = SQLite.Stmt(db, "SELECT * FROM MASSFRACTION WHERE MATKEY=?;")
+    q2 = DBInterface.execute(stmt2, (row, ))
     massfrac, aa = Dict{Int,UncertainValue}(), Dict{Int,Float64}()
-    for mfrow in eachrow(mfs)
-        @assert mfrow[:MATROWID]==row
-        z, c, uc, a = mfrow[:MFZ], mfrow[:MFC], mfrow[:MFUC], mfrow[:MFA]
+    for r2 in q2
+        @assert r2[:MATKEY]==row
+        z, c, uc, a = r2[:MFZ], r2[:MFC], r2[:MFUC], r2[:MFA]
         massfrac[z] = uv(c,uc)
         a>=0 && (aa[z]=a)
     end
     return Material(matname, massfrac, den, aa, desc)
 end
 
+function Base.find(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Int
+    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
+    q1 = DBInterface.execute(stmt1, (matname, ))
+    return SQLite.done(r1) ? -1 : Row(q1)[:PKEY]
+end
+
+Base.read(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Material =
+    read(db, Material, find(db, Material, matname))
+
 function Base.delete!(db::SQLite.DB, ::Type{Material}, matname::AbstractString)
     stmt1 = SQLite.Stmt(db, "SELECT PKEY, * FROM MATERIAL WHERE MATNAME=?;")
-    r1 = DBInterface.execute(stmt1, (matname, ))
-    if !SQLite.done(r1)
-        df1 = r1 |> DataFrame
+    q1 = DBInterface.execute(stmt1, (matname, ))
+    for r1 in q1
         SQLite.transaction(db) do
-            stmt1 = SQLite.Stmt(db, "DELETE FROM MASSFRACTION where MATROWID=?;")
-            DBInterface.execute(stmt1, (df1[end,:PKEY], ))
+            stmt1 = SQLite.Stmt(db, "DELETE FROM MASSFRACTION where MATKEY=?;")
+            DBInterface.execute(stmt1, (r1[:PKEY], ))
             stmt2 = SQLite.Stmt(db, "DELETE FROM MATERIAL where PKEY=?;")
-            DBInterface.execute(stmt2, (df1[end,:PKEY], ))
+            DBInterface.execute(stmt2, (r1[:PKEY], ))
         end
     end
 end
@@ -62,17 +70,17 @@ Base.filter(db::SQLite.DB, ::Type{Material}, prs::Pair{Element, ClosedInterval{F
 function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, ClosedInterval{Float64}})::Vector{String}
     cmds, args = String[], Any[]
     for (elm, ci) in filt
-        push!(cmds, "SELECT MATROWID FROM MASSFRACTION WHERE MFZ=? AND MFC>=? and MFC<=?")
+        push!(cmds, "SELECT MATKEY FROM MASSFRACTION WHERE MFZ=? AND MFC>=? and MFC<=?")
         append!(args, [ z(elm), minimum(ci), maximum(ci) ])
     end
     stmt = SQLite.Stmt(db, join(cmdsol," INTERSECT ")*";")
-    df = DBInterface.execute(stmt, args) |> DataFrame
+    q = DBInterface.execute(stmt, args)
     res = String[]
-    for row in eachrow(df)
+    for r1 in q
         stmt2 = SQLite.Stmt(db, "SELECT MATNAME FROM MATERIAL WHERE PKEY=?;")
-        df2 = DBInterface.execute(stmt2, (row[:MATROWID], )) |> DataFrame
-        if size(df2)[1] ≠ 0
-            push!(res,df2[end,:MATNAME])
+        q2 = DBInterface.execute(stmt2, (r1[:MATKEY], ))
+        for r2 in q2
+            push!(res, r[:MATNAME])
         end
     end
     return res
