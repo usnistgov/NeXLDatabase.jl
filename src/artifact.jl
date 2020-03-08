@@ -24,7 +24,7 @@ function Base.write(db::SQLite.DB, ::Type{DBArtifact}, filename::String, type::S
     return  DBInterface.lastrowid(results)
 end
 
-function Base.read(db::SQLite, ::Type{DBArtifact}, pkey::Int)
+function Base.read(db::SQLite.DB, ::Type{DBArtifact}, pkey::Int)
     stmt1 = SQLite.Stmt(db, "SELECT * FROM ARTIFACT WHERE PKEY=?;")
     q = DBInterface.execute(stmt1, (pkey, ))
     if SQLite.done(q)
@@ -34,7 +34,7 @@ function Base.read(db::SQLite, ::Type{DBArtifact}, pkey::Int)
     return DBArtifact( r[:PKEY], r[:TYPE], r[:FORMAT], r[:FILENAME], r[:DATA] )
 end
 
-Base.read(db::SQLite, ::Type{Spectrum}, pkey::Int)::Spectrum =
+Base.read(db::SQLite.DB, ::Type{Spectrum}, pkey::Int)::Spectrum =
      convert(Spectrum, read(db,DBArtifact,pkey))
 
 function Base.convert(::Type{Spectrum}, artifact::DBArtifact)::Spectrum
@@ -42,9 +42,10 @@ function Base.convert(::Type{Spectrum}, artifact::DBArtifact)::Spectrum
         error("This artifact is not a spectrum.")
     end
     if artifact.format=="EMSA"
-        return readEMSA(IOBuffer(art.data), Float64))
-    elif artifact.format=="ASPEX"
+        return readEMSA(IOBuffer(art.data), Float64)
+    elseif artifact.format=="ASPEX"
         return readAspexTIFF(IOBuffer(art.data); withImgs=true)
     else
         error("Unknown spectrum format $(art.format).")
+    end
 end

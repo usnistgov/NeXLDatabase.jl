@@ -20,6 +20,8 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         for cmd in strip.(split(cmds,";"))
             if length(cmd)>0
                 SQLite.execute(db, cmd)
+            end
+        end
     end
     db = SQLite.DB(filename)
     existing = SQLite.tables(db)
@@ -33,6 +35,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
             @info "Building table $(tbl)."
+
             buildTable(tbl)
         end
     end
@@ -43,6 +46,7 @@ include("material.jl")
 include("person.jl")
 include("laboratory.jl")
 include("instrument.jl")
+include("sample.jl")
 include("artifact.jl")
 include("spectrum.jl")
 
@@ -52,5 +56,8 @@ export DBInstrument
 export DBDetector
 export DBArtifact
 export DBSpectrum
+export DBMember
+export DBSample
+export find
 
 end # module

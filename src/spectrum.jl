@@ -22,7 +22,7 @@ struct DBSpectrum
     composition::Union{Material,Missing}
     collectedby::DBPerson
     sample::DBSample
-    collected::Time
+    collected::DateTime
     name::String
     data::DBArtifact
 end
@@ -30,29 +30,45 @@ end
 function Base.write(#
         db::SQLite.DB, #
         ::Type{DBSpectrum}, #
-        det::DBDetector, #
+        det::Int, #
         e0::Float64, #
-        comp::Union{String,Missing}, #
-        collectedBy::DBPerson, #
-        sample::DBSample, #
-        collected::Time, #
+        comp::Int, #
+        collectedBy::Int, #
+        sample::Int, #
+        collected::DateTime, #
         name::String, #
         filename::String,
         format::String)::Int
     if !((format=="EMSA") || (format=="ASPEX"))
         error("Unknown format $(format) in write(db, DBSpectrum,...).")
     end
-    compIdx = ismissing(comp) ? 0 : find(db, Material, comp)
-    stmt1 = SQLite.Stmt(db, "INSERT INTO SAMPLE ( DETECTOR, BEAMENERGY, COMPOSITION, COLLECTEDBY, SAMPLE, COLLECTED, NAME, ARTIFACT ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );")
-    results = DBInterface.execute(stmt1, (det.pkey, e0, compIdx, collectedBy.pkey, sample.pkey, collected, name, artifact.pkey ))
+    artifact = write(db, DBArtifact, filename, "SPECTRUM", format)
+    stmt1 = SQLite.Stmt(db, "INSERT INTO SPECTRUM ( DETECTOR, BEAMENERGY, COMPOSITION, COLLECTEDBY, SAMPLE, COLLECTED, NAME, ARTIFACT ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );")
+    results = DBInterface.execute(stmt1, (det, e0, comp, collectedBy, sample, collected, name, artifact ))
     return  DBInterface.lastrowid(results)
 end
 
-function Base.read(db::SQLite, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM ARTIFACT WHERE PKEY=?;")
+function Base.write(#
+        db::SQLite.DB, #
+        ::Type{DBSpectrum}, #
+        det::DBDetector, #
+        e0::Float64, #
+        comp::Union{Material, Missing}, #
+        collectedBy::DBPerson, #
+        sample::DBSample, #
+        collected::DateTime, #
+        name::String, #
+        filename::String,
+        format::String)::Int
+    compIdx = ismissing(comp) ? -1 : write(db, comp)
+    return write(db, DBSpectrum, det.pkey, e0, compidx, collectedBy.pkey, sample.pkey, collected, name, filename, format)
+end
+
+function Base.read(db::SQLite.DB, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
+    stmt1 = SQLite.Stmt(db, "SELECT * FROM SPECTRUM WHERE PKEY=?;")
     q = DBInterface.execute(stmt1, (pkey, ))
     if SQLite.done(q)
-        error("No artifact found with pkey=$(pkey)")
+        error("No spectrum found with pkey=$(pkey)")
     end
     r=SQLite.Row(q)
     mat = r[:COMPOSITION] > 0 ? read(db,Material,r[:COMPOSITION]) : missing
