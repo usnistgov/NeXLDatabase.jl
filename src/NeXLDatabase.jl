@@ -30,7 +30,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "person", "laboratory", "labmembers", #
         "sample", "project", #
         "instrument", "detector", #
-        "artifact", "spectrum",
+        "spectrum",
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
@@ -48,6 +48,7 @@ include("laboratory.jl")
 include("instrument.jl")
 include("sample.jl")
 include("artifact.jl")
+include("project.jl")
 include("spectrum.jl")
 
 export DBPerson
@@ -58,6 +59,8 @@ export DBArtifact
 export DBSpectrum
 export DBMember
 export DBSample
+export DBProject
+export DBProjectSpectrum
 export find
 
 end # module

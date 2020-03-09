@@ -7,10 +7,10 @@ struct DBProject
     description::String
 end
 
-Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String)::Int
+Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String)::Int =
     write(db, DBProject, name, desc, 0)
 
-Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, parent::DBProject)::Int
+Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, parent::DBProject)::Int =
     write(db, DBProject, name, desc, parent.pkey)
 
 function Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, parentkey::Int)::Int
@@ -31,18 +31,20 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, pkey::Int)::DBProject
     return DBPerson(r[:PKEY], parent, r[:NAME], r[:DESCRIPTION])
 end
 
-function Base.read(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::DBProject
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM PROJECT WHERE PKEY=?;")
+function Base.read(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::Vector{DBProject}
+    stmt1 = SQLite.Stmt(db, "SELECT * FROM PROJECT WHERE PARENT=?;")
     q = DBInterface.execute(stmt1, ( parent.pkey, ))
-    if SQLite.done(q)
-        error("No known project with key '$(pkey)'.")
-    end
-    r = SQLite.Row(q)
-    return DBPerson(r[:PKEY], parent, r[:NAME], r[:DESCRIPTION])
+    return [ DBProject(r[:PKEY], parent, r[:NAME], r[:DESCRIPTION]) for r in q]
 end
 
 Base.findall(db::SQLite.DB, ::Type{DBProject}, parentkey::Int)::Vector{DBProject} =
     findall(db, DBProject, read(db, DBProject, parentkey))
+
+function Base.find(db::SQLite.DB, ::Type{DBProject}, parentkey::Int, name::String)::Int
+    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM PROJECT WHERE PARENT=? AND NAME=?;")
+    q = DBInterface.execute(stmt1, ( parentkey, name))
+    return SQLite.done(q) ? -1 : SQLite.Row(q)[:PKEY]
+end
 
 function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::Vector{DBProject}
     stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM PROJECT WHERE PARENT=?;")
