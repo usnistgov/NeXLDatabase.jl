@@ -13,8 +13,8 @@ using Dates
     l1 = write(db, DBLaboratory, "OpenLab", read(db, DBPerson, ld1))
     l2 = write(db, DBLaboratory, "ClosedLab", read(db, DBPerson, ld2))
 
-    lm1 = write(db, DBMember, l1, ld1)
-    lm1 = write(db, DBMember, l2, ld2)
+    write(db, DBMember, l1, 1)
+    write(db, DBMember, l2, 2)
 
     i1 = write(db, DBInstrument, l1, "JEOL", "JXA-7001", "H103")
     i2 = write(db, DBInstrument, l1, "TESCAN", "MIRA3", "H119")
@@ -35,10 +35,19 @@ using Dates
 
     k240 = read(db, Material, "K240")
     @test isapprox(value(k240[n"Ba"]), 0.2687, atol = 0.000001)
-    @test NeXLDatabase.find(db, DBPerson, "jib@gmail.com") == ld2
-    @test NeXLDatabase.find(db, DBPerson, "unknown@gmail.com") == -1
-    @test NeXLDatabase.find(db, DBPerson, "bqg@gmail.com") == ld1
-    @test NeXLDatabase.find(db, DBPerson, "nicholas.ritchie@nist.gov") == 1
+    @test find(db, DBPerson, "jib@gmail.com") == ld2
+    jib = read(db, DBPerson, find(db, DBPerson, "jib@gmail.com"))
+    @test jib.name=="Jeanne I. Bottle"
+    @test jib.email=="jib@gmail.com"
+    @test jib.pkey==ld2
+    @test find(db, DBPerson, "unknown@gmail.com") == -1
+    @test find(db, DBPerson, "bqg@gmail.com") == ld1
+    @test find(db, DBPerson, "nicholas.ritchie@nist.gov") == 1
+
+    lab = read(db, DBLaboratory, l1)
+    @test lab.pkey==l1
+    @test lab.name=="OpenLab"
+    @test lab.contact==find(db, DBPerson, "bqg@gmail.com")
 
     s1 = write(db, DBSample, l1, "SPI REP", "Rare Earth Phosphates")
     for mat in ("CeP5O14", "LaP5O14", "NdP5O14", "PrP5O14", "SmP5O14", "YP5O14")

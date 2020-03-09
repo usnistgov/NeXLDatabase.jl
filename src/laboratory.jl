@@ -8,7 +8,9 @@ end
 function Base.write(db::SQLite.DB, ::Type{DBLaboratory}, name, contactkey::Int)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO LABORATORY ( NAME, CONTACT ) VALUES ( ?, ? );")
     r = DBInterface.execute(stmt1, ( name, contactkey))
-    return DBInterface.lastrowid(r)
+    res = DBInterface.lastrowid(r)
+    write(db, DBMember, res, contactkey)
+    return res
 end
 
 Base.write(db::SQLite.DB, ::Type{DBLaboratory}, name, contact::DBPerson)::Int =
