@@ -30,12 +30,11 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "person", "laboratory", "labmembers", #
         "sample", "project", #
         "instrument", "detector", #
-        "spectrum",
+        "artifact", "spectrum",
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
-            @info "Building table $(tbl)."
-
+            @info "Creating database table $(tbl)."
             buildTable(tbl)
         end
     end

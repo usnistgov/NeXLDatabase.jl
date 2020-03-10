@@ -1,10 +1,12 @@
 using Test
+using NeXLCore
+using NeXLSpectrum
 using NeXLDatabase
 #using NeXLSpectrum
 using Dates
 
 #@testset begin
-dbname = tempname()
+dbname = "c:\\Users\\nritchie\\Desktop\\temp.db" # tempname()
 db = openNeXLDatabase(dbname)
 write(db, DBPerson, "Harvey Sun Beetle", "hsb@gmail.com")
 ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
@@ -70,7 +72,8 @@ for mat in ("CeP5O14", "LaP5O14", "NdP5O14", "PrP5O14", "SmP5O14", "YP5O14")
     write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
 end
 
-proj = write(db, DBProject, "GSR", "From Amy's GSR", find(db, DBProject, 0, "Tests"))
+@test testproj == find(db, DBProject, 0, "Tests")
+proj = write(db, DBProject, "GSR", "From Amy's GSR", testproj)
 s2 = write(db, DBSample, l1, "Shooter #1 - Zero time", "A sample collected by the Boston Police")
 sidx = write(
     db,
@@ -87,10 +90,36 @@ sidx = write(
 )
 write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
 
-
 specs = read(db, DBProject, DBSpectrum, proj)
 @test length(specs)==1
-sps=NeXLDatabase.spectrum.(specs)
+sps=convert.(Spectrum, specs)
+@test sps[1][480]==110.0
 
-# write(db, DBArtifact, )
+function tifffilename(i)
+   res = "$i.tif"
+   return repeat('0',max(0,9-length(res)))*res
+end
+
+for i in 10:1000
+    fn = tifffilename(i)
+    sidx = write(
+        db,
+        DBSpectrum,
+        d5,
+        20.0e3,
+        1,
+        ld1,
+        s2,
+        now(),
+        fn,
+        joinpath("c:\\Users\\nritchie\\Desktop\\Amy's GSR\\Shooter #1 - Zero time\\APA\\Analysis 2019-07-17 10.58.57.-0400\\Mag0", fn),
+        "ASPEX",
+    )
+    write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
+end
+
+
+spec = read(db, DBSpectrum, 200)
+using Gadfly
+plot(convert(Spectrum, spec), xmax=10.0e3)
 #end

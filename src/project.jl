@@ -27,8 +27,8 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, pkey::Int)::DBProject
     end
     r = SQLite.Row(q)
     # Recursively read parent projects
-    parent = r[:PARENT] == 0 ? Missing : read(db, DBProject, r[:PARENT])
-    return DBPerson(r[:PKEY], parent, r[:NAME], r[:DESCRIPTION])
+    parent = r[:PARENT] == 0 ? missing : read(db, DBProject, r[:PARENT])
+    return DBProject(r[:PKEY], parent, r[:NAME], r[:DESCRIPTION])
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::Vector{DBProject}
@@ -40,16 +40,10 @@ end
 Base.findall(db::SQLite.DB, ::Type{DBProject}, parentkey::Int)::Vector{DBProject} =
     findall(db, DBProject, read(db, DBProject, parentkey))
 
-function Base.find(db::SQLite.DB, ::Type{DBProject}, parentkey::Int, name::String)::Int
+function find(db::SQLite.DB, ::Type{DBProject}, parentkey::Int, name::String)::Int
     stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM PROJECT WHERE PARENT=? AND NAME=?;")
     q = DBInterface.execute(stmt1, ( parentkey, name))
     return SQLite.done(q) ? -1 : SQLite.Row(q)[:PKEY]
-end
-
-function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::Vector{DBProject}
-    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM PROJECT WHERE PARENT=?;")
-    q = DBInterface.execute(stmt1, ( parent.pkey, ))
-    return [ read(db, DBProject, parent) for r in q ]
 end
 
 Base.findall(db::SQLite.DB, ::Type{DBProject})::Vector{DBProject} =
