@@ -1,10 +1,12 @@
+-- Possible to create a hierarchy of samples, sub-samples, sub-sub-samples,...
 CREATE TABLE SAMPLE (
     PKEY INTEGER PRIMARY KEY AUTOINCREMENT,
+    PARENT INTEGER NOT NULL, -- -1 or PKEY of PARENT SAMPLE
     OWNER INTEGER NOT NULL,
     NAME TEXT NOT NULL, -- Ex: "Block C"
     DESCRIPTION TEXT,
     FOREIGN KEY(OWNER) REFERENCES LABORATORY(PKEY)
 );
 
-INSERT INTO SAMPLE ( OWNER, NAME, DESCRIPTION ) VALUES ( 1, "Geller 583", "Geller APA low Z block" );
-INSERT INTO SAMPLE ( OWNER, NAME, DESCRIPTION ) VALUES ( 1, "Geller 588", "Geller APA high Z block" );
+INSERT INTO SAMPLE ( PARENT, OWNER, NAME, DESCRIPTION ) VALUES ( -1, 1, "Geller 583", "Geller APA low Z block" );
+INSERT INTO SAMPLE ( PARENT, OWNER, NAME, DESCRIPTION ) VALUES ( -1, 1, "Geller 588", "Geller APA high Z block" );
