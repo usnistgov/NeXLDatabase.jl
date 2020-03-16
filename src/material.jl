@@ -10,15 +10,13 @@ function Base.write(db::SQLite.DB, mat::Material; atol=0.0, rtol=0.0001)::Int
             error("$(mat.name) has already been defined as $(mat).")
         end
     else
-        SQLite.transaction(db) do
-            stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY) VALUES ( ?, ?, ? );")
-            r = DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, missing)))
-            res = DBInterface.lastrowid(r)
-            stmt2 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
-            pkey = (DBInterface.execute(stmt2, (name(mat), )) |> DataFrame)[end,:PKEY]
-            stmt3 = SQLite.Stmt(db, "INSERT INTO MASSFRACTION ( MATKEY, MFZ, MFC, MFUC, MFA ) VALUES ( ?, ?, ?, ?, ? )")
-            foreach(elm->DBInterface.execute(stmt3, (pkey, z(elm), value(mat[elm]), σ(mat[elm]), get(mat.a, elm, 0.0))), keys(mat))
-        end
+        stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY) VALUES ( ?, ?, ? );")
+        r = DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, missing)))
+        res = DBInterface.lastrowid(r)
+        stmt2 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
+        pkey = (DBInterface.execute(stmt2, (name(mat), )) |> DataFrame)[end,:PKEY]
+        stmt3 = SQLite.Stmt(db, "INSERT INTO MASSFRACTION ( MATKEY, MFZ, MFC, MFUC, MFA ) VALUES ( ?, ?, ?, ?, ? )")
+        foreach(elm->DBInterface.execute(stmt3, (pkey, z(elm), value(mat[elm]), σ(mat[elm]), get(mat.a, elm, 0.0))), keys(mat))
     end
     return res
 end

@@ -6,7 +6,7 @@ using NeXLDatabase
 using Dates
 
 #@testset begin
-dbname = "c:\\Users\\nritchie\\Desktop\\temp.db" # tempname()
+dbname = "c:\\Users\\nritchie\\Desktop\\temp4.db" # tempname()
 db = openNeXLDatabase(dbname)
 write(db, DBPerson, "Harvey Sun Beetle", "hsb@gmail.com")
 ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
@@ -121,5 +121,33 @@ end
 
 spec = read(db, DBSpectrum, 200)
 using Gadfly
-plot(convert(Spectrum, spec), xmax=10.0e3)
+plot(convert(Spectrum, spec), klms=[n"Ca",n"O",n"C"],xmax=10.0e3)
+
+transaction(db) do
+    project = write(db, DBProject, "Quant Test", "Simple test of quant tables", testproj)
+    fitspectra=write(db, NeXLDatabase.DBFitSpectra, "K412 on TESCAN", project, [n"O",n"Mg",n"Al",n"Si",n"Ca",n"Fe"])
+    det, person, e0, comp = 11, 1, 20.0e3, find(db, Material, "K412")
+    block = write(db, DBSample, 1, "QC IIIE","Gen III Quality Control Block E")
+    sample = write(db, DBSample, block, 1, "K412","SRM Glass")
+    dt=DateTime(Date(2019,5,7),Time(13,51,0))
+    for i in 0:4
+        fn = "C:\\Users\\nritchie\\.julia\\dev\\NeXLSpectrum\\test\\K412 spectra\\III-E K412[$i][4].msa"
+        spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "K412[$i]", fn, "EMSA")
+        write(db, NeXLDatabase.DBFitSpectrum, fitspectra, spec)
+    end
+    for ref in ( "Al2O3", "CaF2", "Fe", "MgO", "SiO2" )
+        fn = "C:\\Users\\nritchie\\.julia\\dev\\NeXLSpectrum\\test\\K412 spectra\\$ref std.msa"
+        comp = find(db, Material, ref)
+        if comp<0
+            comp = write(db, parse(Material, ref))
+        end
+        sample = write(db, DBSample, block, 1, ref,"$ref standard")
+        spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
+        ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material,ref))...])
+    end
+end
+
+Juno.@enter read(db, NeXLDatabase.DBFitSpectra, 1)
+
+
 #end
