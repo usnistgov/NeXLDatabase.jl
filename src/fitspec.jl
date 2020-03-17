@@ -67,7 +67,7 @@ _elmstostr(elms::Vector{Element}) = join(symbol.(elms),',')
 _strtoelms(str::String) = parse.(Element,strip.(split(str,',')))
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element})::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, ELEMENTS) VALUES( ?, ?, ?, ?);")
+    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, ELEMENTS) VALUES( ?, ?, ?);")
     q = DBInterface.execute(stmt1, ( projKey, detKey, _elmstostr(elms)))
     return  DBInterface.lastrowid(q)
 end
