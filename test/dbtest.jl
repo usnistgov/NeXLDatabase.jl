@@ -2,7 +2,7 @@ using Test
 using NeXLCore
 using NeXLSpectrum
 using NeXLDatabase
-#using NeXLSpectrum
+using SQLite
 using Dates
 
 #@testset begin
@@ -123,20 +123,33 @@ spec = read(db, DBSpectrum, 200)
 using Gadfly
 plot(convert(Spectrum, spec), klms=[n"Ca",n"O",n"C"],xmax=10.0e3)
 
-transaction(db) do
-    project = write(db, DBProject, "Quant Test", "Simple test of quant tables", testproj)
-    fitspectra=write(db, NeXLDatabase.DBFitSpectra, "K412 on TESCAN", project, [n"O",n"Mg",n"Al",n"Si",n"Ca",n"Fe"])
-    det, person, e0, comp = 11, 1, 20.0e3, find(db, Material, "K412")
-    block = write(db, DBSample, 1, "QC IIIE","Gen III Quality Control Block E")
-    sample = write(db, DBSample, block, 1, "K412","SRM Glass")
-    dt=DateTime(Date(2019,5,7),Time(13,51,0))
-    for i in 0:4
-        fn = "C:\\Users\\nritchie\\.julia\\dev\\NeXLSpectrum\\test\\K412 spectra\\III-E K412[$i][4].msa"
-        spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "K412[$i]", fn, "EMSA")
+SQLite.transaction(db) do
+    path = joinpath(@__DIR__,"ADM-6005a")
+    project = write(db, DBProject, "ADM-6005a Test", "Description of ADM-6005a Test", testproj)
+    fitspectra=write(db, NeXLDatabase.DBFitSpectra, project, [n"O",n"Al",n"Si",n"Ca",n"Ti",n"Zn",n"Ge"])
+    det, person, e0, comp = 11, 2, 20.0e3, find(db, Material, "ADM6005a")
+    sample = write(db, DBSample, 1, "ADM-6005a block","ADM-6005a prepared by Eric Windsor")
+    dt=DateTime(Date(2019,7,12),Time(9,30,0))
+    for i in 1:15
+        fn = "$path\\ADM-6005a_$(i).msa"
+        spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "ADM-6005a[$i]", fn, "EMSA")
         write(db, NeXLDatabase.DBFitSpectrum, fitspectra, spec)
     end
-    for ref in ( "Al2O3", "CaF2", "Fe", "MgO", "SiO2" )
-        fn = "C:\\Users\\nritchie\\.julia\\dev\\NeXLSpectrum\\test\\K412 spectra\\$ref std.msa"
+    block1 = write(db, DBSample, 1, "Standard Block C","NIST Standard Block C")
+    block2 = write(db, DBSample, 1, "High TC Block","NIST High Temperature Superconductor Block")
+    block3 = write(db, DBSample, 1, "Copper QC","Copper QC Standard")
+    for ref in ( "Al", "Al2O3", "C", "Fe", "Ge", "K411", "K412", "MgO", "Si", "SiO2", "Ti", "Zn" )
+        fn = "$path\\$(ref)_StdC.msa"
+        comp = find(db, Material, ref)
+        if comp<0
+            comp = write(db, parse(Material, ref))
+        end
+        sample = write(db, DBSample, block, 1, ref,"$ref standard")
+        spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
+        ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material,ref))...])
+    end
+    for ref in ( "CaF2", )
+        fn = "$path\\$(ref)_HiTc.msa"
         comp = find(db, Material, ref)
         if comp<0
             comp = write(db, parse(Material, ref))
@@ -147,7 +160,7 @@ transaction(db) do
     end
 end
 
-Juno.@enter read(db, NeXLDatabase.DBFitSpectra, 1)
+fs = read(db, NeXLDatabase.DBFitSpectra, 2)
 
 
 #end
