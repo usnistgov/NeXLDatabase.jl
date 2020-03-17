@@ -6,6 +6,8 @@ struct DBPerson
     email::String
 end
 
+Base.show(io::IO, per::DBPerson) = print(io, per.name)
+
 function Base.write(db::SQLite.DB, ::Type{DBPerson}, name::String, email::String)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( ?, ? );")
     r = DBInterface.execute(stmt1, ( name, email ))

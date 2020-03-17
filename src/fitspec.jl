@@ -7,6 +7,8 @@ struct DBFitSpectrum
     spectrum::DBSpectrum
 end
 
+Base.convert(::Type{Spectrum}, dbfs::DBFitSpectrum) = Base.convert(Spectrum, dbfs.spectrum)
+
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectrum}, fitspectra::Int, spectrum::Int)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRUM(FITSPECTRA, SPECTRUM ) VALUES ( ?, ? );")
     q = DBInterface.execute(stmt1, ( fitspectra, spectrum ))
@@ -21,6 +23,8 @@ struct DBReference
     # refroi::Vector{DBReferenceROI}
 end
 
+Base.convert(::Type{Spectrum}, dbr::DBReference) = Base.convert(Spectrum, dbr.spectrum)
+
 function Base.write(db::SQLite.DB, ::Type{DBReference}, fitspectra::Int, spectrum::Int, elements::Vector{Element})::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO REFERENCESPECTRUM(FITSPECTRA, SPECTRUM, ELEMENTS) VALUES ( ?, ?, ? );")
     q = DBInterface.execute(stmt1, ( fitspectra, spectrum, _elmstostr(elements)))
@@ -29,19 +33,42 @@ end
 
 struct DBFitSpectra
     pkey::Int
-    name::String
     project::DBProject
+    detector::DBDetector
     elements::Vector{Element}
     fitspectrum::Vector{DBFitSpectrum}
     refspectrum::Vector{DBReference}
 end
 
+function Base.show(io::IO, dbfs::DBFitSpectra)
+    println(io, "   Index = $(dbfs.pkey)")
+    println(io, " Project = $(repr(dbfs.project))")
+    println(io, "Elements = $(symbol.(dbfs.elements))")
+    println(io, "Detector = $(repr(detector))")
+    print(io, "==== Unknowns ====")
+    for spec in unknowns(dbfs)
+        print(io, "\n\t$spec")
+    end
+    print(io,"\n==== References ====")
+    for elm in dbfs.elements
+        print(io, "\n\t$(symbol(elm)) = $(reference(dbfs, elm))")
+    end
+end
+
+unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
+    map(fs->convert(Spectrum, fs), fbfs.fitspectrum)
+
+reference(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
+    [ convert.(Spectrum, filter(rs->elm in rs.elements, fbfs.refspectrum))...]
+
+PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
+
 _elmstostr(elms::Vector{Element}) = join(symbol.(elms),',')
 _strtoelms(str::String) = parse.(Element,strip.(split(str,',')))
 
-function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, name::String, projKey::Int, elms::Vector{Element})::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(NAME, PROJECT, ELEMENTS) VALUES( ?, ?, ?);")
-    q = DBInterface.execute(stmt1, ( name, projKey, _elmstostr(elms)))
+function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element})::Int
+    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, ELEMENTS) VALUES( ?, ?, ?, ?);")
+    q = DBInterface.execute(stmt1, ( projKey, detKey, _elmstostr(elms)))
     return  DBInterface.lastrowid(q)
 end
 
@@ -53,7 +80,8 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
     end
     r1=SQLite.Row(q1)
     @assert r1[:PKEY]==pkey "Mismatching pkey in DBFitSpectrum"
-    name, project = r1[:NAME], read(db, DBProject, r1[:PROJECT])
+    project = read(db, DBProject, r1[:PROJECT])
+    detector = read(db, DBDetector, r1[:DETECTOR])
     elms = _strtoelms(r1[:ELEMENTS])
     stmt2 = SQLite.Stmt(db, "SELECT * FROM FITSPECTRUM WHERE FITSPECTRA=?;")
     q2 = DBInterface.execute(stmt2, ( pkey, ))
@@ -69,38 +97,16 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
     for r3 in q3
         @assert r3[:FITSPECTRA]==pkey
         spec = read(db, DBSpectrum, r3[:SPECTRUM])
-        elms = _strtoelms(r3[:ELEMENTS])
-        #stmt4 = SQLite.Stmt(db,"SELECT PKEY FROM REFERENCEROI WHERE REFPKEY=?;")
-        #q4 = DBInterface.execute(stmt4, ( r3[:PKEY]))
-        #refrois = DBReferenceROI[]
-        #for r4 in q4
-        #    push!(refrois, read(db,DBReferenceROI,r4[:PKEY]))
-        #end
-        push!(refs, DBReference(r3[:PKEY], r3[:FITSPECTRA], spec, elms))
+        push!(refs, DBReference(r3[:PKEY], r3[:FITSPECTRA], spec, _strtoelms(r3[:ELEMENTS])))
     end
-    return DBFitSpectra(pkey, name, project, elms, tobefit, refs)
+    return DBFitSpectra(pkey, project, detector, elms, tobefit, refs)
 end
 
-#struct DBReferenceROI
-#    pkey::Int
-#    refpkey::Int # REFERENCE(PKEY) or DBReference.pkey
-#    atomicnumber::Int
-#    low::Float64 # In eV
-#    high::Float64 # In eV
-#end
-
-#function Base.write(db::SQLite.DB, ::DBReferenceROI, refpkey::Int, element::Element, roi::ClosedInterval{Float64})::Int
-#    stmt1 = SQLite.Stmt(db, "INSERT INTO REFERENCESPECTRUM(REFPKEY, ATOMICNUMBER, LOW, HIGH) VALUES ( ?, ?, ?, ? );")
-#    q = DBInterface.execute(stmt1, ( refpkey, element.atomic_number, roi.left, roi.right ))
-#    return  DBInterface.lastrowid(results)
-#end
-
-#_intervalstostr(intervals::Dict{Element, Vector{ClosedInterval{Float64}}})::String =
-#    join((elm.symbol*"=("*join(repr.(i),',')*')' for (elm, i) in intervals),';')
-
-#function _strtointervals(str::String)
-#    ci(ss)::Vector{ClosedInterval{Float64}} =
-#        [ ClosedInterval(parse(Float64,i[1]), parse(Float64,i[2])) for i in split.(strip.(split(ss[2:end-1],',')),r"\.\.") ]
-#    ts = split.(split(str,";"),'=')
-#    return Dict( parse(Element,t[1]) => ci(t[2]) for t in ts)
-#end
+function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
+    stmt1 = SQLite.Stmt(db,"DELETE FROM FITSPECTRA WHERE PKEY=?;")
+    stmt2 = SQLite.Stmt(db,"DELETE FROM REFERENCESPECTRUM WHERE FITSPECTRA=?;")
+    stmt3 = SQLite.Stmt(db,"DELETE FROM FITSPECTRUM WHERE FITSPECTRA=?;")
+    DBInterface.execute(stmt3, (pkey, ))
+    DBInterface.execute(stmt2, (pkey, ))
+    DBInterface.execute(stmt1, (pkey, ))
+end

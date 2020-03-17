@@ -10,12 +10,16 @@ using SQLite
 
 struct DBArtifact
     pkey::Int
-    format::String # EMSA, ASPEXTIFF, PNG, JPEG, ...
+    format::String # EMSA, ASPEX, PNG, JPEG, ...
     filename::String
     data::Vector{UInt8}
 end
 
+Base.show(io::IO, art::DBArtifact) = print(io, "Format: $(art.format)\nSource: $(art.filename)")
+
 function Base.write(db::SQLite.DB, ::Type{DBArtifact}, filename::String, format::String)::Int
+    @assert isfile(filename) "No such file in write artifact to database: $filename"
+    @assert stat(filename).size > 0 "Null file in write artifact to database: $filename"
     data = Mmap.mmap(filename, Vector{UInt8}, (stat(filename).size, ))
     stmt1 = SQLite.Stmt(db, "INSERT INTO ARTIFACT ( FORMAT, FILENAME, DATA) VALUES ( ?, ?, ? );")
     results = DBInterface.execute(stmt1, ( uppercase(format), filename, data ))

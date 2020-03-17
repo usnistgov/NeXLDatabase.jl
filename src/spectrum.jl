@@ -62,7 +62,13 @@ function Base.read(db::SQLite.DB, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
     return DBSpectrum( r[:PKEY], det, r[:BEAMENERGY], mat, coll, samp, r[:COLLECTED], r[:NAME], art)
 end
 
-Base.convert(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum = convert(Spectrum, dbspec.artifact)
+function Base.convert(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
+    res = convert(Spectrum, dbspec.artifact)
+    res[:Name] = dbspec.name
+    res[:Sample] = repr(dbspec.sample)
+    res[:Owner] = dbspec.collectedby.name
+    return res
+end
 
 struct DBProjectSpectrum
     pkey::Int

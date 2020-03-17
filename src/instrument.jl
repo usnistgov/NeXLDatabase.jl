@@ -16,6 +16,7 @@ end
 #    FOREIGN KEY(LABKEY) REFERENCES LABORATORY(PKEY)
 #);
 
+Base.show(io::IO, inst::DBInstrument) = print(io,"$(inst.laboratory)'s $(inst.vendor) $(inst.model)")
 
 function Base.write(db::SQLite.DB, ::Type{DBInstrument}, labkey::Int, vendor::String, model::String, location::String)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO INSTRUMENT ( LABKEY, VENDOR, MODEL, LOCATION ) VALUES ( ?, ?, ?, ? );")
@@ -52,6 +53,8 @@ struct DBDetector
     model::String
     description::String
 end
+
+Base.show(io::IO, det::DBDetector) = print(io,"$(det.vendor) $(det.model) on $(repr(det.instrument))")
 
 function Base.write(db::SQLite.DB, ::Type{DBDetector}, instkey::Int, vendor::String, model::String, desc::String)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO DETECTOR ( INSTRUMENT, VENDOR, MODEL, DESCRIPTION ) VALUES ( ?, ?, ?, ? );")

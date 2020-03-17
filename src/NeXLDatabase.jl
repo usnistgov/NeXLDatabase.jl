@@ -62,5 +62,8 @@ export DBSample
 export DBProject
 export DBProjectSpectrum
 export find
+export DBFitSpectra
+export DBFitSpectrum
+export DBReference
 
 end # module

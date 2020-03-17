@@ -5,6 +5,8 @@ struct DBLaboratory
     contact::DBPerson
 end
 
+Base.show(io::IO, lab::DBLaboratory) = print(io, lab.name)
+
 function Base.write(db::SQLite.DB, ::Type{DBLaboratory}, name, contactkey::Int)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO LABORATORY ( NAME, CONTACT ) VALUES ( ?, ? );")
     r = DBInterface.execute(stmt1, ( name, contactkey))

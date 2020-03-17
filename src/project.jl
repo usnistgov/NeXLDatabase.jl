@@ -7,6 +7,9 @@ struct DBProject
     description::String
 end
 
+Base.show(io::IO, pr::DBProject) =
+    print(io, (!ismissing(pr.parent) ? repr(pr.parent)*" : " : "")*pr.name)
+
 Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String)::Int =
     write(db, DBProject, name, desc, 0)
 
