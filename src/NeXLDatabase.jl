@@ -34,7 +34,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
-            @info "Creating database table $(tbl)."
+            # @info "Creating database table $(tbl)."
             buildTable(tbl)
         end
     end
@@ -65,5 +65,7 @@ export find
 export DBFitSpectra
 export DBFitSpectrum
 export DBReference
+
+export unknowns, reference
 
 end # module

@@ -7,6 +7,9 @@ struct DBFitSpectrum
     spectrum::DBSpectrum
 end
 
+Base.show(io::IO, dbf::DBFitSpectrum) =
+    print(io, "Fit[$(dbf.spectrum.name)]")
+
 Base.convert(::Type{Spectrum}, dbfs::DBFitSpectrum) = Base.convert(Spectrum, dbfs.spectrum)
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectrum}, fitspectra::Int, spectrum::Int)::Int
@@ -22,6 +25,9 @@ struct DBReference
     elements::Vector{Element}
     # refroi::Vector{DBReferenceROI}
 end
+
+Base.show(io::IO, dbr::DBReference) =
+    print(io,"Reference[$(dbr.spectrum.name) with $(join(symbol.(dbr.elements),','))]")
 
 Base.convert(::Type{Spectrum}, dbr::DBReference) = Base.convert(Spectrum, dbr.spectrum)
 
@@ -46,12 +52,12 @@ function Base.show(io::IO, dbfs::DBFitSpectra)
     println(io, "Elements = $(symbol.(dbfs.elements))")
     println(io, "Detector = $(repr(dbfs.detector))")
     print(io, "==== Unknowns ====")
-    for spec in unknowns(dbfs)
-        print(io, "\n\t$spec")
+    for dbf in dbfs.fitspectrum
+        print(io, "\n\t$dbf")
     end
     print(io,"\n==== References ====")
     for elm in dbfs.elements
-        print(io, "\n\t$(symbol(elm)) = $(reference(dbfs, elm))")
+        print(io, "\n\t$(symbol(elm)) = $(join(dbreference(dbfs, elm),','))")
     end
 end
 
@@ -59,7 +65,19 @@ unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
     map(fs->convert(Spectrum, fs), fbfs.fitspectrum)
 
 reference(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
-    [ convert.(Spectrum, filter(rs->elm in rs.elements, fbfs.refspectrum))...]
+    convert.(Spectrum, dbreference(fbfs, elm))
+
+dbreference(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
+    collect(filter(rs->elm in rs.elements, fbfs.refspectrum))
+
+
+charXRayLabels(#
+    dbr::DBReference, #
+    elm::Element, #
+    det::Detector, #
+    ampl::Float64, #
+    maxE::Float64=1.0e6)::Vector{CharXRayLabel} =
+    NeXLSpectrum.charXRayLabels(convert(Spectrum,dbr.spectrum), elm, dbr.elements, det, ampl, maxE)
 
 PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
 

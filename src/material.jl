@@ -53,6 +53,15 @@ NeXLCore.has(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Bool =
 Base.read(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Material =
     read(db, Material, find(db, Material, matname))
 
+function NeXLCore.material(db::SQLite.DB, matname::AbstractString)
+    idx = find(db, Material, matname)
+    if idx ≠ -1
+        return read(db, Material, idx)
+    else
+        error("Unable to find $(matname) in the material database.")
+    end
+end
+
 function Base.delete!(db::SQLite.DB, ::Type{Material}, matname::AbstractString)
     stmt1 = SQLite.Stmt(db, "SELECT PKEY, * FROM MATERIAL WHERE MATNAME=?;")
     q1 = DBInterface.execute(stmt1, (matname, ))
