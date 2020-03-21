@@ -4,8 +4,10 @@ using NeXLSpectrum
 using NeXLDatabase
 using SQLite
 using Dates
+using Statistics
 
-dbname = ":memory:" # tempname()
+#dbname = ":memory:"
+dbname = tempname()
 db = openNeXLDatabase(dbname)
 @testset "NeXLDatabase" begin
     # db = openNeXLDatabase(dbname)
@@ -24,11 +26,16 @@ db = openNeXLDatabase(dbname)
     i3 = write(db, DBInstrument, l2, "Hitachi", "SU-2000", "Gr19")
     i4 = write(db, DBInstrument, l2, "Cameca", "SX-5", "Gr22")
 
-    d1 = write(db, DBDetector, i1, "Bruker", "Esprit 6|30", "30 mm² SDD")
-    d2 = write(db, DBDetector, i2, "Oxford", "XMAX 100", "100 mm² SDD")
-    d3 = write(db, DBDetector, i3, "EDAX", "Octane", "30 mm² SDD")
-    d4 = write(db, DBDetector, i4, "Thermo", "UltraDry", "100 mm² SDD")
-    d5 = write(db, DBDetector, i2, "Pulsetor", "Torrent", "4 × 30 mm² SDD")
+    d1 = write(db, DBDetector, i1, "Bruker", "Esprit 6|30", "30 mm² SDD", 125.0, 106, -495.0, 5.0, 4, 21, 55, 94 )
+    d2 = write(db, DBDetector, i2, "Oxford", "XMAX 100", "100 mm² SDD", 130.0, 20, 0.0, 5.0, 4, 18, 50, 90 )
+    d3 = write(db, DBDetector, i3, "EDAX", "Octane", "30 mm² SDD", 128.0, 20, 0.0, 5.0, 4, 21, 55, 94 )
+    d4 = write(db, DBDetector, i4, "Thermo", "UltraDry", "100 mm² SDD", 126.0, 20, 0.0, 10.0, 4, 21, 55, 94 )
+    d5 = write(db, DBDetector, i2, "Pulsetor", "Torrent", "4 × 30 mm² SDD", 132.0, 10, 0.0, 10.0, 4, 21, 55, 94 )
+
+    det3 = convert(BasicEDS, read(db, DBDetector, d3), 4096)
+    @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol=0.001)
+    @test energy(1, det3)==0.0
+    @test length(NeXLSpectrum.visible(characteristic(n"Ca",ltransitions),det3))==0
 
     mats = NeXLCore.compositionlibrary()
     for (name, mat) in mats
@@ -127,8 +134,6 @@ db = openNeXLDatabase(dbname)
         @test max(spec[1:500]...)==567.0
     end
 
-    #using Gadfly
-    #plot(spec, klms=[n"Ca",n"O",n"C"],xmax=10.0e3)
     @testset "ADM-6005a" begin
         SQLite.transaction(db) do
             path = joinpath(@__DIR__,"ADM-6005a")
@@ -145,8 +150,8 @@ db = openNeXLDatabase(dbname)
             block1 = write(db, DBSample, 1, "Standard Block C","NIST Standard Block C")
             block2 = write(db, DBSample, 1, "High TC Block","NIST High Temperature Superconductor Block")
             block3 = write(db, DBSample, 1, "Copper QC","Copper QC Standard")
-            for ref in ( "Al", "Al2O3", "C", "Fe", "Ge", "K411", "K412", "MgO", "Si", "SiO2", "Ti", "Zn", "Cu" )
-                fn = "$path\\$(ref)_StdC.msa"
+            for ref in ( "Al", "Fe", "Ge", "Si", "SiO2", "Ti", "Zn" )
+                fn = "$path\\$(ref) std.msa"
                 comp = find(db, Material, ref)
                 if comp<0
                     comp = write(db, parse(Material, ref))
@@ -156,7 +161,7 @@ db = openNeXLDatabase(dbname)
                 ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material,ref))...])
             end
             for ref in ( "CaF2", )
-                fn = "$path\\$(ref)_HiTc.msa"
+                fn = "$path\\$(ref) std.msa"
                 comp = find(db, Material, ref)
                 if comp<0
                     comp = write(db, parse(Material, ref))
@@ -173,26 +178,42 @@ db = openNeXLDatabase(dbname)
         @test !(n"Fe" in fs.elements)
         @test n"Ge" in fs.elements
         @test length(fs.fitspectrum)==15
-        @test length(fs.refspectrum)==14
+        @test length(fs.refspectrum)==8
     end
 end
 
-pickaref(refs) = refs[1]
+@testset "DBFitSpectra" begin
+    pickaref(refs) = refs[1]
+    fs = read(db, NeXLDatabase.DBFitSpectra, 1)
+    unks = NeXLDatabase.unknowns(fs)
+    det = convert(BasicEDS, fs.detector)
+    ff = buildfilter(det)
 
-fs = read(db, NeXLDatabase.DBFitSpectra, 1)
-unks = NeXLDatabase.unknowns(fs)
-det = matching(unks[1], 132.0)
-ff = buildfilter(det)
-
-e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
-frs = FilteredReference[]
-for elm in fs.elements
-    spec = pickaref(NeXLDatabase.reference(fs, elm))
-    ref = pickaref(NeXLDatabase.dbreference(fs, elm))
-    spec = convert(Spectrum, ref.spectrum)
-    for cxrl in NeXLDatabase.charXRayLabels(ref, elm, det, 1.0e-4, e0)
-        push!(frs, filter(cxrl, ff, 1.0/dose(spec)))
+    e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
+    frs = FilteredReference[]
+    for elm in fs.elements
+        spec = convert(Spectrum, ref.spectrum)
+        filtRefs = Iterator.flatten(
+            filter(NeXLDatabase.charXRayLabels(spec, elm, ref.elements, det, 1.0e-4, e0), ff, 1.0/dose(spec)) for ref in refs)
+        append!(frs, filtRefs)
     end
-end
 
-fr = fit(unks[1], ff, frs)
+    res = [ fit(unk, ff, frs) for unk in unks ]
+
+    findlabel(frs::Vector{FilteredReference}, cxr::CharXRay) =
+        frs[findfirst(fr->cxr in fr.identifier.xrays, frs)].identifier
+
+    @test isapprox(mean(values(findlabel(frs, n"O K-L3"), res)), 0.4923, rtol=0.003)
+    @test isapprox(mean(values(findlabel(frs, n"Si K-L3"), res)), 0.0214, atol=0.013)
+    @test isapprox(mean(values(findlabel(frs, n"Al K-L3"), res)), 0.0281, rtol=0.004)
+    @test isapprox(mean(values(findlabel(frs, n"Ca K-L3"), res)), 0.1211, rtol=0.003)
+    @test isapprox(mean(values(findlabel(frs, n"Zn L3-M5"), res)), 0.0700, rtol=0.05)
+    @test isapprox(mean(values(findlabel(frs, n"Zn K-L3"), res)), 0.1115, atol=0.0005)
+    @test isapprox(mean(values(findlabel(frs, n"Zn K-M3"), res)), 0.1231, rtol=0.03)
+    @test isapprox(mean(values(findlabel(frs, n"Ti L3-M3"), res)), 0.0541, atol=0.22)
+    @test isapprox(mean(values(findlabel(frs, n"Ti K-L3"), res)), 0.064, atol=0.001)
+    @test isapprox(mean(values(findlabel(frs, n"Ti K-M3"), res)), 0.064, rtol=0.06)
+    @test isapprox(mean(values(findlabel(frs, n"Ge L3-M5"), res)), 0.1789, rtol=0.01)
+    @test isapprox(mean(values(findlabel(frs, n"Ge K-L3"), res)), 0.2628, atol=0.001)
+    @test isapprox(mean(values(findlabel(frs, n"Ge K-M3"), res)), 0.279, atol=0.011)
+end

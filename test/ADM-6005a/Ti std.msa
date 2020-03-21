@@ -9,26 +9,27 @@
 #XUNITS      : eV
 #YUNITS      : counts
 #DATATYPE    : Y
-#XPERCHAN    : 5.01623
-#OFFSET      : -484.15362
+#XPERCHAN    : 5.00558
+#OFFSET      : -481.93076
 #BEAMKV      : 20
 #SIGNALTYPE  : EDS
 #ELEVANGLE   : 40
-#AZIMANGLE   : 45
+#AZIMANGLE   : 180
 #LIVETIME    : 100.001
 #REALTIME    : 119.087
 #PROBECUR    : 5
 #TAUWIND     : 0
-#TDEADLYR    : 0
+#TDEADLYR    : 0.00001
 #TACTLYR     : 0.045
-#TALWIND     : 0.004
+#TALWIND     : 0.003
 #CHOFFSET    : 0.0
 #XLABEL      : Energy (eV)
 #YLABEL      : Counts
 #EDSDET      : SDUTW
+##SPECIMEN   : Trimmed[Ti std,196 eV,326 eV]
 ##D2STDCMP   : Ti,(Ti:100.0),4.5
-##DET_HASH   : c6370f9e-cc72-7559-f57e-203d75c8942b
-##CALIB_HASH : 54ef92dd-c85a-cbea-898e-ee7ceef4355d
+##DET_HASH   : 787abefa-8318-6950-113a-0b12cd5d2e3f
+##CALIB_HASH : bf9d58b5-ed5c-0618-2474-e45ee23fbd69
 ##SAMPLE     : <BulkSample id="1">\n<mOrientation id="2">\n<double>0.0</double>\n<double>0.0</double>\n<double>-1.0</double>\n</mOrientation>\n</BulkSample>
 #SPECTRUM    : 
 0, 
@@ -166,33 +167,33 @@
 384, 
 406, 
 403, 
-425, 
-493, 
-545, 
-623, 
-732, 
-880, 
-1074, 
-1284, 
-1558, 
-1874, 
-2302, 
-2736, 
-3134, 
-3636, 
-3985, 
-4192, 
-4199, 
-4055, 
-3825, 
-3473, 
-2976, 
-2548, 
-2110, 
-1702, 
-1461, 
-1315, 
-1292, 
+418.65294, 
+450.80214, 
+482.95134, 
+515.10053, 
+547.24973, 
+579.39893, 
+611.54813, 
+643.69733, 
+675.84652, 
+707.99572, 
+740.14492, 
+772.29412, 
+804.44331, 
+836.59251, 
+868.74171, 
+900.89091, 
+933.04011, 
+965.1893, 
+997.3385, 
+1029.4877, 
+1061.6369, 
+1093.78609, 
+1125.93529, 
+1158.08449, 
+1190.23369, 
+1222.38289, 
+1254.53208, 
 1419, 
 1769, 
 2166, 

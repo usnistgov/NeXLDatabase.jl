@@ -9,8 +9,8 @@
 #XUNITS      : eV
 #YUNITS      : counts
 #DATATYPE    : Y
-#XPERCHAN    : 5.01623
-#OFFSET      : -484.15362
+#XPERCHAN    : 5.01716
+#OFFSET      : -484.20818
 #BEAMKV      : 20
 #SIGNALTYPE  : EDS
 #ELEVANGLE   : 40
@@ -27,7 +27,7 @@
 #YLABEL      : Counts
 #EDSDET      : SDUTW
 ##DET_HASH   : c6370f9e-cc72-7559-f57e-203d75c8942b
-##CALIB_HASH : 54ef92dd-c85a-cbea-898e-ee7ceef4355d
+##CALIB_HASH : b2d706fe-df19-4747-f399-990df6ef62be
 ##SAMPLE     : <BulkSample id="1">\n<mOrientation id="2">\n<double>0.0</double>\n<double>0.0</double>\n<double>-1.0</double>\n</mOrientation>\n</BulkSample>
 #SPECTRUM    : 
 0, 

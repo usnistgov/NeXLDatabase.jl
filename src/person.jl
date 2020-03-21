@@ -9,9 +9,13 @@ end
 Base.show(io::IO, per::DBPerson) = print(io, per.name)
 
 function Base.write(db::SQLite.DB, ::Type{DBPerson}, name::String, email::String)::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( ?, ? );")
-    r = DBInterface.execute(stmt1, ( name, email ))
-    return DBInterface.lastrowid(r)
+    pk = find(db, DBPerson, email)
+    if pk==-1
+        stmt1 = SQLite.Stmt(db, "INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( ?, ? );")
+        r = DBInterface.execute(stmt1, ( name, email ))
+        pk = DBInterface.lastrowid(r)
+    end
+    return pk
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBPerson}, pkey::Int)::DBPerson

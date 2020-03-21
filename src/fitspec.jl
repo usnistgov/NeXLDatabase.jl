@@ -23,7 +23,6 @@ struct DBReference
     fitspectra::Int
     spectrum::DBSpectrum
     elements::Vector{Element}
-    # refroi::Vector{DBReferenceROI}
 end
 
 Base.show(io::IO, dbr::DBReference) =

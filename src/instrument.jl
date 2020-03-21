@@ -16,25 +16,38 @@ end
 #    FOREIGN KEY(LABKEY) REFERENCES LABORATORY(PKEY)
 #);
 
-Base.show(io::IO, inst::DBInstrument) = print(io,"$(inst.laboratory)'s $(inst.vendor) $(inst.model)")
+Base.show(io::IO, inst::DBInstrument) = print(io, "$(inst.laboratory)'s $(inst.vendor) $(inst.model)")
 
-function Base.write(db::SQLite.DB, ::Type{DBInstrument}, labkey::Int, vendor::String, model::String, location::String)::Int
+function Base.write(
+    db::SQLite.DB,
+    ::Type{DBInstrument},
+    labkey::Int,
+    vendor::String,
+    model::String,
+    location::String,
+)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO INSTRUMENT ( LABKEY, VENDOR, MODEL, LOCATION ) VALUES ( ?, ?, ?, ? );")
-    r = DBInterface.execute(stmt1, ( labkey, vendor, model, location ))
+    r = DBInterface.execute(stmt1, (labkey, vendor, model, location))
     return DBInterface.lastrowid(r)
 end
 
-Base.write(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory, vendor::String, model::String, location::String)::Int =
-    write(db, DBInstrument, lab.pkey, vendor, model, location)
+Base.write(
+    db::SQLite.DB,
+    ::Type{DBInstrument},
+    lab::DBLaboratory,
+    vendor::String,
+    model::String,
+    location::String,
+)::Int = write(db, DBInstrument, lab.pkey, vendor, model, location)
 
 function Base.read(db::SQLite.DB, ::Type{DBInstrument}, pkey::Int)::DBInstrument
     stmt1 = SQLite.Stmt(db, "SELECT * FROM INSTRUMENT WHERE PKEY=?;")
-    q = DBInterface.execute(stmt1, ( pkey, ))
+    q = DBInterface.execute(stmt1, (pkey,))
     if SQLite.done(q)
         error("No known person with key '$(pkey)'.")
     end
     r = SQLite.Row(q)
-    return DBInstrument(r[:PKEY], read(db, DBLaboratory, r[:LABKEY]), r[:VENDOR], r[:MODEL], r[:LOCATION] )
+    return DBInstrument(r[:PKEY], read(db, DBLaboratory, r[:LABKEY]), r[:VENDOR], r[:MODEL], r[:LOCATION])
 end
 
 #CREATE TABLE DETECTOR (
@@ -52,25 +65,97 @@ struct DBDetector
     vendor::String
     model::String
     description::String
+    resolution::Float64
+    lld::Int
+    zero::Float64
+    gain::Float64
+    minK::Int
+    minL::Int
+    minM::Int
+    minN::Int
 end
 
-Base.show(io::IO, det::DBDetector) = print(io,"$(det.vendor) $(det.model) on $(repr(det.instrument))")
+Base.show(io::IO, det::DBDetector) = print(io, "$(det.vendor) $(det.model) on $(repr(det.instrument))")
 
-function Base.write(db::SQLite.DB, ::Type{DBDetector}, instkey::Int, vendor::String, model::String, desc::String)::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO DETECTOR ( INSTRUMENT, VENDOR, MODEL, DESCRIPTION ) VALUES ( ?, ?, ?, ? );")
-    r = DBInterface.execute(stmt1, ( instkey, vendor, model, desc ))
+function Base.write(
+    db::SQLite.DB,
+    ::Type{DBDetector}, #
+    instkey::Int,
+    vendor::String,
+    model::String,
+    desc::String, #
+    fwhm::Float64,
+    lld::Int,
+    zero::Float64,
+    gain::Float64, #
+    minK::Int,
+    minL::Int,
+    minM::Int,
+    minN::Int, #
+)::Int
+    stmt1 = SQLite.Stmt(
+        db,
+        "INSERT INTO DETECTOR ( INSTRUMENT, VENDOR, MODEL, DESCRIPTION, RESOLUTION, LLD, ZERO, GAIN, MINK, MINL, MINM, MINN ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );",
+    )
+    r = DBInterface.execute(stmt1, (instkey, vendor, model, desc, fwhm, lld, zero, gain, minK, minL, minM, minN))
     return convert(Int, DBInterface.lastrowid(r))
 end
 
-Base.write(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument, vendor::String, model::String, desc::String)::Int =
-    write(db, DBDetector, inst.pkey, vendor, model, desc)
+Base.write(
+    db::SQLite.DB,
+    ::Type{DBDetector}, #
+    inst::DBInstrument,
+    vendor::String,
+    model::String,
+    desc::String, #
+    fwhm::Float64,
+    lld::Int,
+    zero::Float64,
+    gain::Float64, #
+    minK::Int,
+    minL::Int,
+    minM::Int,
+    minN::Int, #
+)::Int = write(db, DBDetector, inst.pkey, vendor, model, desc, fwhm, lld, zero, gain, minK, minL, minM, minN)
 
 function Base.read(db::SQLite.DB, ::Type{DBDetector}, pkey::Int)::DBDetector
     stmt1 = SQLite.Stmt(db, "SELECT * FROM DETECTOR WHERE PKEY=?;")
-    q = DBInterface.execute(stmt1, ( pkey, ))
+    q = DBInterface.execute(stmt1, (pkey,))
     if SQLite.done(q)
         error("No known detector with key '$(pkey)'.")
     end
     r = SQLite.Row(q)
-    return DBDetector(r[:PKEY], read(db, DBInstrument, r[:INSTRUMENT]), r[:VENDOR], r[:MODEL], r[:DESCRIPTION] )
+    return DBDetector(
+        r[:PKEY],
+        read(
+            db,
+            DBInstrument, #
+            r[:INSTRUMENT],
+        ),
+        r[:VENDOR],
+        r[:MODEL],
+        r[:DESCRIPTION], #
+        r[:RESOLUTION],
+        r[:LLD],
+        r[:ZERO],
+        r[:GAIN], #
+        r[:MINK],
+        r[:MINL],
+        r[:MINM],
+        r[:MINN],
+    )
 end
+
+Base.convert(::Type{BasicEDS}, dbd::DBDetector, chCount::Int = 4096) = BasicEDS(
+    chCount,
+    dbd.zero,
+    dbd.gain,
+    dbd.resolution,
+    dbd.lld, #
+    Dict{Char,Element}(
+        'K' => elements[dbd.minK],
+        'L' => elements[dbd.minL], #
+        'M' => elements[dbd.minM],
+        'N' => elements[dbd.minN],
+    ),
+)
