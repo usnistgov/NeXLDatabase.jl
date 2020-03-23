@@ -66,6 +66,6 @@ export DBFitSpectra
 export DBFitSpectrum
 export DBReference
 
-export unknowns, reference
+export unknowns, references
 
 end # module

@@ -63,20 +63,11 @@ end
 unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
     map(fs->convert(Spectrum, fs), fbfs.fitspectrum)
 
-reference(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
+references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
     convert.(Spectrum, dbreference(fbfs, elm))
 
 dbreference(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
     collect(filter(rs->elm in rs.elements, fbfs.refspectrum))
-
-
-charXRayLabels(#
-    dbr::DBReference, #
-    elm::Element, #
-    det::Detector, #
-    ampl::Float64, #
-    maxE::Float64=1.0e6)::Vector{CharXRayLabel} =
-    NeXLSpectrum.charXRayLabels(convert(Spectrum,dbr.spectrum), elm, dbr.elements, det, ampl, maxE)
 
 PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
 

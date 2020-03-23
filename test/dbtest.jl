@@ -6,8 +6,8 @@ using SQLite
 using Dates
 using Statistics
 
-#dbname = ":memory:"
-dbname = tempname()
+dbname = ":memory:"
+#dbname = tempname()
 db = openNeXLDatabase(dbname)
 @testset "NeXLDatabase" begin
     # db = openNeXLDatabase(dbname)
@@ -26,16 +26,16 @@ db = openNeXLDatabase(dbname)
     i3 = write(db, DBInstrument, l2, "Hitachi", "SU-2000", "Gr19")
     i4 = write(db, DBInstrument, l2, "Cameca", "SX-5", "Gr22")
 
-    d1 = write(db, DBDetector, i1, "Bruker", "Esprit 6|30", "30 mm² SDD", 125.0, 106, -495.0, 5.0, 4, 21, 55, 94 )
-    d2 = write(db, DBDetector, i2, "Oxford", "XMAX 100", "100 mm² SDD", 130.0, 20, 0.0, 5.0, 4, 18, 50, 90 )
-    d3 = write(db, DBDetector, i3, "EDAX", "Octane", "30 mm² SDD", 128.0, 20, 0.0, 5.0, 4, 21, 55, 94 )
-    d4 = write(db, DBDetector, i4, "Thermo", "UltraDry", "100 mm² SDD", 126.0, 20, 0.0, 10.0, 4, 21, 55, 94 )
-    d5 = write(db, DBDetector, i2, "Pulsetor", "Torrent", "4 × 30 mm² SDD", 132.0, 10, 0.0, 10.0, 4, 21, 55, 94 )
+    d1 = write(db, DBDetector, i1, "Bruker", "Esprit 6|30", "30 mm² SDD", 125.0, 106, -495.0, 5.0, 4, 21, 55, 94)
+    d2 = write(db, DBDetector, i2, "Oxford", "XMAX 100", "100 mm² SDD", 130.0, 20, 0.0, 5.0, 4, 18, 50, 90)
+    d3 = write(db, DBDetector, i3, "EDAX", "Octane", "30 mm² SDD", 128.0, 20, 0.0, 5.0, 4, 21, 55, 94)
+    d4 = write(db, DBDetector, i4, "Thermo", "UltraDry", "100 mm² SDD", 126.0, 20, 0.0, 10.0, 4, 21, 55, 94)
+    d5 = write(db, DBDetector, i2, "Pulsetor", "Torrent", "4 × 30 mm² SDD", 132.0, 10, 0.0, 10.0, 4, 21, 55, 94)
 
     det3 = convert(BasicEDS, read(db, DBDetector, d3), 4096)
-    @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol=0.001)
-    @test energy(1, det3)==0.0
-    @test length(NeXLSpectrum.visible(characteristic(n"Ca",ltransitions),det3))==0
+    @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol = 0.001)
+    @test energy(1, det3) == 0.0
+    @test length(NeXLSpectrum.visible(characteristic(n"Ca", ltransitions), det3)) == 0
 
     mats = NeXLCore.compositionlibrary()
     for (name, mat) in mats
@@ -59,7 +59,7 @@ db = openNeXLDatabase(dbname)
             s1,
             now(),
             mat * " standard",
-            joinpath(joinpath(@__DIR__,"spectra"), mat * " std.msa"),
+            joinpath(joinpath(@__DIR__, "spectra"), mat * " std.msa"),
             "EMSA",
         )
         write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
@@ -68,17 +68,17 @@ db = openNeXLDatabase(dbname)
         @test isapprox(value(k240[n"Ba"]), 0.2687, atol = 0.000001)
         @test find(db, DBPerson, "jib@gmail.com") == ld2
         jib = read(db, DBPerson, find(db, DBPerson, "jib@gmail.com"))
-        @test jib.name=="Jeanne I. Bottle"
-        @test jib.email=="jib@gmail.com"
-        @test jib.pkey==ld2
+        @test jib.name == "Jeanne I. Bottle"
+        @test jib.email == "jib@gmail.com"
+        @test jib.pkey == ld2
         @test find(db, DBPerson, "unknown@gmail.com") == -1
         @test find(db, DBPerson, "bqg@gmail.com") == ld1
         @test find(db, DBPerson, "nicholas.ritchie@nist.gov") == 1
 
         lab = read(db, DBLaboratory, l1)
-        @test lab.pkey==l1
-        @test lab.name=="OpenLab"
-        @test lab.contact.pkey==find(db, DBPerson, "bqg@gmail.com")
+        @test lab.pkey == l1
+        @test lab.name == "OpenLab"
+        @test lab.contact.pkey == find(db, DBPerson, "bqg@gmail.com")
     end
 
     @testset "Amy's GSR test" begin
@@ -96,19 +96,19 @@ db = openNeXLDatabase(dbname)
                 s2,
                 now(),
                 "03272.tif",
-                joinpath(joinpath(@__DIR__,"spectra"), "03272.tif"),
+                joinpath(joinpath(@__DIR__, "spectra"), "03272.tif"),
                 "ASPEX",
             )
             write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
 
             specs = read(db, DBProject, DBSpectrum, proj)
-            @test length(specs)==1
-            sps=convert.(Spectrum, specs)
-            @test sps[1][480]==110.0
+            @test length(specs) == 1
+            sps = convert.(Spectrum, specs)
+            @test sps[1][480] == 110.0
 
             function tifffilename(i)
-               res = "$i.tif"
-               return repeat('0',max(0,9-length(res)))*res
+                res = "$i.tif"
+                return repeat('0', max(0, 9 - length(res))) * res
             end
 
             for i in 10:1000
@@ -123,52 +123,56 @@ db = openNeXLDatabase(dbname)
                     s2,
                     now(),
                     fn,
-                    joinpath("c:\\Users\\nritchie\\Desktop\\Amy's GSR\\Shooter #1 - Zero time\\APA\\Analysis 2019-07-17 10.58.57.-0400\\Mag0", fn),
+                    joinpath(
+                        "c:\\Users\\nritchie\\Desktop\\Amy's GSR\\Shooter #1 - Zero time\\APA\\Analysis 2019-07-17 10.58.57.-0400\\Mag0",
+                        fn,
+                    ),
                     "ASPEX",
                 )
                 write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
             end
         end
         spec = convert(Spectrum, read(db, DBSpectrum, 200))
-        @test spec[369]==465.0
-        @test max(spec[1:500]...)==567.0
+        @test spec[369] == 465.0
+        @test max(spec[1:500]...) == 567.0
     end
 
     @testset "ADM-6005a" begin
         SQLite.transaction(db) do
-            path = joinpath(@__DIR__,"ADM-6005a")
+            path = joinpath(@__DIR__, "ADM-6005a")
             project = write(db, DBProject, "ADM-6005a Test", "Description of ADM-6005a Test", testproj)
             det, person, e0, comp = 1, 2, 20.0e3, find(db, Material, "ADM6005a")
-            fitspectra=write(db, NeXLDatabase.DBFitSpectra, project, det, [n"O",n"Al",n"Si",n"Ca",n"Ti",n"Zn",n"Ge"])
-            sample = write(db, DBSample, 1, "ADM-6005a block","ADM-6005a prepared by Eric Windsor")
-            dt=DateTime(Date(2019,7,12),Time(9,30,0))
+            fitspectra =
+                write(db, NeXLDatabase.DBFitSpectra, project, det, [n"O", n"Al", n"Si", n"Ca", n"Ti", n"Zn", n"Ge"])
+            sample = write(db, DBSample, 1, "ADM-6005a block", "ADM-6005a prepared by Eric Windsor")
+            dt = DateTime(Date(2019, 7, 12), Time(9, 30, 0))
             for i in 1:15
                 fn = "$path\\ADM-6005a_$(i).msa"
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "ADM-6005a[$i]", fn, "EMSA")
                 write(db, NeXLDatabase.DBFitSpectrum, fitspectra, spec)
             end
-            block1 = write(db, DBSample, 1, "Standard Block C","NIST Standard Block C")
-            block2 = write(db, DBSample, 1, "High TC Block","NIST High Temperature Superconductor Block")
-            block3 = write(db, DBSample, 1, "Copper QC","Copper QC Standard")
-            for ref in ( "Al", "Fe", "Ge", "Si", "SiO2", "Ti", "Zn" )
+            block1 = write(db, DBSample, 1, "Standard Block C", "NIST Standard Block C")
+            block2 = write(db, DBSample, 1, "High TC Block", "NIST High Temperature Superconductor Block")
+            block3 = write(db, DBSample, 1, "Copper QC", "Copper QC Standard")
+            for ref in ("Al", "Fe", "Ge", "Si", "SiO2", "Ti", "Zn")
                 fn = "$path\\$(ref) std.msa"
                 comp = find(db, Material, ref)
-                if comp<0
+                if comp < 0
                     comp = write(db, parse(Material, ref))
                 end
-                sample = write(db, DBSample, block1, 1, ref,"$ref standard")
+                sample = write(db, DBSample, block1, 1, ref, "$ref standard")
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
-                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material,ref))...])
+                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material, ref))...])
             end
-            for ref in ( "CaF2", )
+            for ref in ("CaF2",)
                 fn = "$path\\$(ref) std.msa"
                 comp = find(db, Material, ref)
-                if comp<0
+                if comp < 0
                     comp = write(db, parse(Material, ref))
                 end
-                sample = write(db, DBSample, block2, 1, ref,"$ref standard")
+                sample = write(db, DBSample, block2, 1, ref, "$ref standard")
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
-                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material,ref))...])
+                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material, ref))...])
             end
         end
 
@@ -177,43 +181,44 @@ db = openNeXLDatabase(dbname)
         @test fs.project.name == "ADM-6005a Test"
         @test !(n"Fe" in fs.elements)
         @test n"Ge" in fs.elements
-        @test length(fs.fitspectrum)==15
-        @test length(fs.refspectrum)==8
+        @test length(fs.fitspectrum) == 15
+        @test length(fs.refspectrum) == 8
     end
 end
 
-@testset "DBFitSpectra" begin
-    pickaref(refs) = refs[1]
-    fs = read(db, NeXLDatabase.DBFitSpectra, 1)
-    unks = NeXLDatabase.unknowns(fs)
-    det = convert(BasicEDS, fs.detector)
-    ff = buildfilter(det)
+fs = read(db, NeXLDatabase.DBFitSpectra, 1)
+unks = unknowns(fs)
+det = convert(BasicEDS, fs.detector)
+ff = buildfilter(det)
 
-    e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
-    frs = FilteredReference[]
-    for elm in fs.elements
-        spec = convert(Spectrum, ref.spectrum)
-        filtRefs = Iterator.flatten(
-            filter(NeXLDatabase.charXRayLabels(spec, elm, ref.elements, det, 1.0e-4, e0), ff, 1.0/dose(spec)) for ref in refs)
-        append!(frs, filtRefs)
-    end
-
-    res = [ fit(unk, ff, frs) for unk in unks ]
-
-    findlabel(frs::Vector{FilteredReference}, cxr::CharXRay) =
-        frs[findfirst(fr->cxr in fr.identifier.xrays, frs)].identifier
-
-    @test isapprox(mean(values(findlabel(frs, n"O K-L3"), res)), 0.4923, rtol=0.003)
-    @test isapprox(mean(values(findlabel(frs, n"Si K-L3"), res)), 0.0214, atol=0.013)
-    @test isapprox(mean(values(findlabel(frs, n"Al K-L3"), res)), 0.0281, rtol=0.004)
-    @test isapprox(mean(values(findlabel(frs, n"Ca K-L3"), res)), 0.1211, rtol=0.003)
-    @test isapprox(mean(values(findlabel(frs, n"Zn L3-M5"), res)), 0.0700, rtol=0.05)
-    @test isapprox(mean(values(findlabel(frs, n"Zn K-L3"), res)), 0.1115, atol=0.0005)
-    @test isapprox(mean(values(findlabel(frs, n"Zn K-M3"), res)), 0.1231, rtol=0.03)
-    @test isapprox(mean(values(findlabel(frs, n"Ti L3-M3"), res)), 0.0541, atol=0.22)
-    @test isapprox(mean(values(findlabel(frs, n"Ti K-L3"), res)), 0.064, atol=0.001)
-    @test isapprox(mean(values(findlabel(frs, n"Ti K-M3"), res)), 0.064, rtol=0.06)
-    @test isapprox(mean(values(findlabel(frs, n"Ge L3-M5"), res)), 0.1789, rtol=0.01)
-    @test isapprox(mean(values(findlabel(frs, n"Ge K-L3"), res)), 0.2628, atol=0.001)
-    @test isapprox(mean(values(findlabel(frs, n"Ge K-M3"), res)), 0.279, atol=0.011)
+e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
+frs = FilteredReference[]
+function filteredROIs(ref, elm)
+    spec, elms = convert(Spectrum, ref.spectrum), ref.elements
+    cxrl = NeXLDatabase.charXRayLabels(spec, elm, elms, det, 1.0e-4, e0)
+    return filter(cxrl, ff, 1.0 / dose(spec))
 end
+for elm in fs.elements
+    for ref in filter(ref->elm in ref.elements, fs.refspectrum)
+        append!(frs, filteredROIs(ref, elm))
+    end
+end
+
+res = fit(unks, ff, frs)
+
+findlabel(frs::Vector{FilteredReference}, cxr::CharXRay) =
+    frs[findfirst(fr -> cxr in fr.identifier.xrays, frs)].identifier
+
+@test isapprox(mean(values(findlabel(frs, n"O K-L3"), res)), 0.4923, rtol = 0.003)
+@test isapprox(mean(values(findlabel(frs, n"Si K-L3"), res)), 0.0214, atol = 0.013)
+@test isapprox(mean(values(findlabel(frs, n"Al K-L3"), res)), 0.0281, rtol = 0.004)
+@test isapprox(mean(values(findlabel(frs, n"Ca K-L3"), res)), 0.1211, rtol = 0.003)
+@test isapprox(mean(values(findlabel(frs, n"Zn L3-M5"), res)), 0.0700, rtol = 0.05)
+@test isapprox(mean(values(findlabel(frs, n"Zn K-L3"), res)), 0.1115, atol = 0.0005)
+@test isapprox(mean(values(findlabel(frs, n"Zn K-M3"), res)), 0.1231, rtol = 0.03)
+@test isapprox(mean(values(findlabel(frs, n"Ti L3-M3"), res)), 0.0541, atol = 0.22)
+@test isapprox(mean(values(findlabel(frs, n"Ti K-L3"), res)), 0.064, atol = 0.001)
+@test isapprox(mean(values(findlabel(frs, n"Ti K-M3"), res)), 0.064, rtol = 0.06)
+@test isapprox(mean(values(findlabel(frs, n"Ge L3-M5"), res)), 0.1789, rtol = 0.01)
+@test isapprox(mean(values(findlabel(frs, n"Ge K-L3"), res)), 0.2628, atol = 0.001)
+@test isapprox(mean(values(findlabel(frs, n"Ge K-M3"), res)), 0.279, atol = 0.011)
