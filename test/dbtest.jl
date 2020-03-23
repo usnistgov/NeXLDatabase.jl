@@ -5,6 +5,23 @@ using NeXLDatabase
 using SQLite
 using Dates
 using Statistics
+using Pkg.Artifacts
+
+function tifffilename(i)
+    res = "$i.tif"
+    return repeat('0', max(0, 9 - length(res))) * res
+end
+
+# Download the necessary data using the Artifact mechanism from Google Drive
+zip = artifact"shooter0"
+if !all(i->isfile(joinpath(zip, tifffilename(i))), 1:100)
+    r = ZipFile.Reader(joinpath(zip, "shooter0.zip"))
+    for f in r.files
+        open(joinpath(zip, f.name), "w") do outfile
+            write(outfile, read(f))
+        end
+    end
+end
 
 dbname = ":memory:"
 #dbname = tempname()
@@ -106,12 +123,7 @@ db = openNeXLDatabase(dbname)
             sps = convert.(Spectrum, specs)
             @test sps[1][480] == 110.0
 
-            function tifffilename(i)
-                res = "$i.tif"
-                return repeat('0', max(0, 9 - length(res))) * res
-            end
-
-            for i in 10:1000
+            for i in 1:100
                 fn = tifffilename(i)
                 sidx = write(
                     db,
@@ -123,18 +135,15 @@ db = openNeXLDatabase(dbname)
                     s2,
                     now(),
                     fn,
-                    joinpath(
-                        "c:\\Users\\nritchie\\Desktop\\Amy's GSR\\Shooter #1 - Zero time\\APA\\Analysis 2019-07-17 10.58.57.-0400\\Mag0",
-                        fn,
-                    ),
+                    joinpath(zip,fn),
                     "ASPEX",
                 )
                 write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
             end
         end
-        spec = convert(Spectrum, read(db, DBSpectrum, 200))
-        @test spec[369] == 465.0
-        @test max(spec[1:500]...) == 567.0
+        spec = convert(Spectrum, read(db, DBSpectrum, 95))
+        @test spec[369] == 22.0
+        @test max(spec[1:500]...) == 733.0
     end
 
     @testset "ADM-6005a" begin

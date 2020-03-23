@@ -1,0 +1,6 @@
+[shooter0]
+git-tree-sha1 = "2ef1ba92161ff8020c162a0d1fe9468192f03909"
+lazy=true
+  [[shooter0.download]]
+  sha256="136acdc9ce1852ebdc05fa80c6560e578e290579ff9ba499c09cb8e36cb581df"
+  url="https://drive.google.com/uc?export=download&id=142cHI-1xq3TIRDfklJzgy9YRqQZonqB6"
