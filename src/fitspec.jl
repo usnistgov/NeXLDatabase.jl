@@ -118,3 +118,25 @@ function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
     DBInterface.execute(stmt2, (pkey, ))
     DBInterface.execute(stmt1, (pkey, ))
 end
+
+function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::Vector{FilterFitResult}
+    fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
+    unks = unknowns(fs)
+    det = convert(BasicEDS, fs.detector)
+    ff = buildfilter(det)
+    e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
+    frs = FilteredReference[]
+
+    function filteredROIs(ref, elm)
+        spec, elms = convert(Spectrum, ref.spectrum), ref.elements
+        cxrl = NeXLDatabase.charXRayLabels(spec, elm, elms, det, 1.0e-4, e0)
+        return filter(cxrl, ff, 1.0 / dose(spec))
+    end
+
+    for elm in fs.elements
+        for ref in filter(ref->elm in ref.elements, fs.refspectrum)
+            append!(frs, filteredROIs(ref, elm))
+        end
+    end
+    return fit(unks, ff, frs)
+end

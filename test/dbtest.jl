@@ -185,40 +185,20 @@ db = openNeXLDatabase(dbname)
         @test length(fs.refspectrum) == 8
     end
 end
+@testset "Fit ADM from DB"  begin
+    ffrs = fit(db, DBFitSpectra, 1)
 
-fs = read(db, NeXLDatabase.DBFitSpectra, 1)
-unks = unknowns(fs)
-det = convert(BasicEDS, fs.detector)
-ff = buildfilter(det)
-
-e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
-frs = FilteredReference[]
-function filteredROIs(ref, elm)
-    spec, elms = convert(Spectrum, ref.spectrum), ref.elements
-    cxrl = NeXLDatabase.charXRayLabels(spec, elm, elms, det, 1.0e-4, e0)
-    return filter(cxrl, ff, 1.0 / dose(spec))
+    @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4923, rtol = 0.003)
+    @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)
+    @test isapprox(mean(value.(kratio(n"Al K-L3", ffr) for ffr in ffrs)), 0.0281, rtol = 0.004)
+    @test isapprox(mean(value.(kratio(n"Ca K-L3", ffr) for ffr in ffrs)), 0.1211, rtol = 0.003)
+    @test isapprox(mean(value.(kratio(n"Zn L3-M5", ffr) for ffr in ffrs)), 0.0700, rtol = 0.05)
+    @test isapprox(mean(value.(kratio(n"Zn K-L3", ffr) for ffr in ffrs)), 0.1115, atol = 0.0005)
+    @test isapprox(mean(value.(kratio(n"Zn K-M3", ffr) for ffr in ffrs)), 0.1190, atol = 0.0002)
+    @test isapprox(mean(value.(kratio(n"Ti L3-M3", ffr) for ffr in ffrs)), 0.0541, atol = 0.22)
+    @test isapprox(mean(value.(kratio(n"Ti K-L3", ffr) for ffr in ffrs)), 0.064, atol = 0.001)
+    @test isapprox(mean(value.(kratio(n"Ti K-M3", ffr) for ffr in ffrs)), 0.064, rtol = 0.06)
+    @test isapprox(mean(value.(kratio(n"Ge L3-M5", ffr) for ffr in ffrs)), 0.1789, rtol = 0.01)
+    @test isapprox(mean(value.(kratio(n"Ge K-L3", ffr) for ffr in ffrs)), 0.2628, atol = 0.001)
+    @test isapprox(mean(value.(kratio(n"Ge K-M3", ffr) for ffr in ffrs)), 0.279, atol = 0.011)
 end
-for elm in fs.elements
-    for ref in filter(ref->elm in ref.elements, fs.refspectrum)
-        append!(frs, filteredROIs(ref, elm))
-    end
-end
-
-res = fit(unks, ff, frs)
-
-findlabel(frs::Vector{FilteredReference}, cxr::CharXRay) =
-    frs[findfirst(fr -> cxr in fr.identifier.xrays, frs)].identifier
-
-@test isapprox(mean(values(findlabel(frs, n"O K-L3"), res)), 0.4923, rtol = 0.003)
-@test isapprox(mean(values(findlabel(frs, n"Si K-L3"), res)), 0.0214, atol = 0.013)
-@test isapprox(mean(values(findlabel(frs, n"Al K-L3"), res)), 0.0281, rtol = 0.004)
-@test isapprox(mean(values(findlabel(frs, n"Ca K-L3"), res)), 0.1211, rtol = 0.003)
-@test isapprox(mean(values(findlabel(frs, n"Zn L3-M5"), res)), 0.0700, rtol = 0.05)
-@test isapprox(mean(values(findlabel(frs, n"Zn K-L3"), res)), 0.1115, atol = 0.0005)
-@test isapprox(mean(values(findlabel(frs, n"Zn K-M3"), res)), 0.1231, rtol = 0.03)
-@test isapprox(mean(values(findlabel(frs, n"Ti L3-M3"), res)), 0.0541, atol = 0.22)
-@test isapprox(mean(values(findlabel(frs, n"Ti K-L3"), res)), 0.064, atol = 0.001)
-@test isapprox(mean(values(findlabel(frs, n"Ti K-M3"), res)), 0.064, rtol = 0.06)
-@test isapprox(mean(values(findlabel(frs, n"Ge L3-M5"), res)), 0.1789, rtol = 0.01)
-@test isapprox(mean(values(findlabel(frs, n"Ge K-L3"), res)), 0.2628, atol = 0.001)
-@test isapprox(mean(values(findlabel(frs, n"Ge K-M3"), res)), 0.279, atol = 0.011)
