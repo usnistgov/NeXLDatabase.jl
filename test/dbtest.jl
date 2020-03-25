@@ -14,14 +14,6 @@ end
 
 # Download the necessary data using the Artifact mechanism from Google Drive
 zip = artifact"shooter0"
-if !all(i->isfile(joinpath(zip, tifffilename(i))), 1:100)
-    r = ZipFile.Reader(joinpath(zip, "shooter0.zip"))
-    for f in r.files
-        open(joinpath(zip, f.name), "w") do outfile
-            write(outfile, read(f))
-        end
-    end
-end
 
 dbname = ":memory:"
 #dbname = tempname()
