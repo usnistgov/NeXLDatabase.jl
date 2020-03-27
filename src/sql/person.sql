@@ -6,5 +6,5 @@ CREATE TABLE PERSON (
 
 CREATE INDEX PERSON_EMAIL_INDEX ON PERSON (EMAIL);
 
-INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( "Nicholas Ritchie", "nicholas.ritchie@nist.gov");
-INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( "Dale Newbury", "dale.newbury@nist.gov");
+INSERT INTO PERSON ( PKEY, NAME, EMAIL ) VALUES ( 1, "Nicholas Ritchie", "nicholas.ritchie@nist.gov");
+INSERT INTO PERSON ( PKEY, NAME, EMAIL ) VALUES ( 2, "Dale Newbury", "dale.newbury@nist.gov");

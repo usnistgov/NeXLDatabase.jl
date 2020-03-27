@@ -60,13 +60,28 @@ function Base.show(io::IO, dbfs::DBFitSpectra)
     end
 end
 
+"""
+    unknowns(fbfs::DBFitSpectra)::Vector{Spectrum}
+
+Return a vector containing the spectra to be fit.
+"""
 unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
     map(fs->convert(Spectrum, fs), fbfs.fitspectrum)
 
+"""
+    references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum})
+
+Return a vector of the spectra which could be used as references for the Element.
+"""
 references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
     convert.(Spectrum, dbreference(fbfs, elm))
 
-dbreference(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
+"""
+    dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference}
+
+Return a vector of the spectra which could be used as references for the Element as DBReference objects.
+"""
+dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
     collect(filter(rs->elm in rs.elements, fbfs.refspectrum))
 
 PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
@@ -117,26 +132,4 @@ function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
     DBInterface.execute(stmt3, (pkey, ))
     DBInterface.execute(stmt2, (pkey, ))
     DBInterface.execute(stmt1, (pkey, ))
-end
-
-function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::Vector{FilterFitResult}
-    fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
-    unks = unknowns(fs)
-    det = convert(BasicEDS, fs.detector)
-    ff = buildfilter(det)
-    e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
-    frs = FilteredReference[]
-
-    function filteredROIs(ref, elm)
-        spec, elms = convert(Spectrum, ref.spectrum), ref.elements
-        cxrl = NeXLDatabase.charXRayLabels(spec, elm, elms, det, 1.0e-4, e0)
-        return filter(cxrl, ff, 1.0 / dose(spec))
-    end
-
-    for elm in fs.elements
-        for ref in filter(ref->elm in ref.elements, fs.refspectrum)
-            append!(frs, filteredROIs(ref, elm))
-        end
-    end
-    return fit(unks, ff, frs)
 end

@@ -1,6 +1,5 @@
 using Test
 using NeXLCore
-using NeXLSpectrum
 using NeXLDatabase
 using SQLite
 using Dates
@@ -18,17 +17,17 @@ zip = artifact"shooter0"
 dbname = ":memory:"
 #dbname = tempname()
 db = openNeXLDatabase(dbname)
-@testset "NeXLDatabase" begin
-    # db = openNeXLDatabase(dbname)
-    write(db, DBPerson, "Harvey Sun Beetle", "hsb@gmail.com")
+SQLite.transaction(db) do
     ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
     ld2 = write(db, DBPerson, "Jeanne I. Bottle", "jib@gmail.com")
+    ld3 = write(db, DBPerson, "Harvey Sun Beetle", "hsb@gmail.com")
 
     l1 = write(db, DBLaboratory, "OpenLab", read(db, DBPerson, ld1))
     l2 = write(db, DBLaboratory, "ClosedLab", read(db, DBPerson, ld2))
 
     write(db, DBMember, l1, 1)
     write(db, DBMember, l2, 2)
+    write(db, DBMember, l2, ld3)
 
     i1 = write(db, DBInstrument, l1, "JEOL", "JXA-7001", "H103")
     i2 = write(db, DBInstrument, l1, "TESCAN", "MIRA3", "H119")
@@ -41,21 +40,27 @@ db = openNeXLDatabase(dbname)
     d4 = write(db, DBDetector, i4, "Thermo", "UltraDry", "100 mm² SDD", 126.0, 20, 0.0, 10.0, 4, 21, 55, 94)
     d5 = write(db, DBDetector, i2, "Pulsetor", "Torrent", "4 × 30 mm² SDD", 132.0, 10, 0.0, 10.0, 4, 21, 55, 94)
 
-    det3 = convert(BasicEDS, read(db, DBDetector, d3), 4096)
-    @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol = 0.001)
-    @test energy(1, det3) == 0.0
-    @test length(NeXLSpectrum.visible(characteristic(n"Ca", ltransitions), det3)) == 0
-
     mats = NeXLCore.compositionlibrary()
     for (name, mat) in mats
         write(db, mat)
     end
+end
+
+@testset "NeXLDatabase" begin
+    # db = openNeXLDatabase(dbname)
+
+    det3 = convert(BasicEDS, read(db, DBDetector, d3), 4096)
+    @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol = 0.001)
+    @test energy(1, det3) == 0.0
+    @test length(NeXLSpectrum.visible(characteristic(n"Ca", ltransitions), det3)) == 0
+    @test read(db,DBPerson,"dale.newbury@nist.gov").name == "Dale Newbury"
 
     k240 = read(db, Material, "K240")
     lab = read(db, DBLaboratory, l1)
     s1 = write(db, DBSample, l1, "SPI REP", "Rare Earth Phosphates")
-    testproj = write(db, DBProject, "Tests", "Test projects")
-    proj = write(db, DBProject, "REP", "Rare Earth Phosphates", testproj)
+    hsb = read(db,DBPerson,"hsb@gmail.com")
+    testproj = write(db, DBProject, "Tests", "Test projects", hsb)
+    proj = write(db, DBProject, "REP", "Rare Earth Phosphates", hsb, testproj)
     for mat in ("CeP5O14", "LaP5O14", "NdP5O14", "PrP5O14", "SmP5O14", "YP5O14")
         midx = write(db, parse(Material, mat))
         sidx = write(
@@ -93,7 +98,9 @@ db = openNeXLDatabase(dbname)
     @testset "Amy's GSR test" begin
         SQLite.transaction(db) do
             @test testproj == find(db, DBProject, 0, "Tests")
-            proj = write(db, DBProject, "GSR", "From Amy's GSR", testproj)
+            write(db, DBPerson, "Amy", "amy@thelab.com")
+
+            proj = write(db, DBProject, "GSR", "From Amy's GSR", testproj, read(db, DBPerson, "amy@thelab.com"))
             s2 = write(db, DBSample, l1, "Shooter #1 - Zero time", "A sample collected by the Boston Police")
             sidx = write(
                 db,
@@ -141,7 +148,7 @@ db = openNeXLDatabase(dbname)
     @testset "ADM-6005a" begin
         SQLite.transaction(db) do
             path = joinpath(@__DIR__, "ADM-6005a")
-            project = write(db, DBProject, "ADM-6005a Test", "Description of ADM-6005a Test", testproj)
+            project = write(db, DBProject, "ADM-6005a Test", "Description of ADM-6005a Test", read(db, DBPerson, "hsb@gmail.com"), testproj)
             det, person, e0, comp = 1, 2, 20.0e3, find(db, Material, "ADM6005a")
             fitspectra =
                 write(db, NeXLDatabase.DBFitSpectra, project, det, [n"O", n"Al", n"Si", n"Ca", n"Ti", n"Zn", n"Ge"])
@@ -187,9 +194,36 @@ db = openNeXLDatabase(dbname)
     end
 end
 @testset "Fit ADM from DB"  begin
-    ffrs = fit(db, DBFitSpectra, 1)
+    person=read(db,DBPerson,"dale.newbury@nist.gov")
+    krp = read(db, DBProject, 0, "K-ratio Project")
+    project = read(db, DBProject, write(db, DBProject, "Quant Test", "Description of Quant Test", person, krp))
+    lab = findall(db,DBLaboratory, person)[1]
+    sample = read(db, DBSample, write(db, DBSample, lab, "ADM-6005a block", "ADM-6005a prepared by Eric Windsor"))
+    detector = findall(db,DBDetector,findall(db,DBInstrument, lab)[1])[1]
+    unkComp = read(db,Material,"ADM6005a")
 
-    @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4923, rtol = 0.003)
+    blkC = read(db, DBSample, write(db, DBSample, lab, "Standard Block C", "NIST Standard Block C"))
+    hiTC = read(db, DBSample, write(db, DBSample, lab, "High TC Block", "NIST High Temperature Superconductor Block"))
+    e0 = 20.0e3
+
+    path = joinpath(@__DIR__, "ADM-6005a")
+
+    cfs = constructFitSpectra(db, project, sample, unkComp, detector, person, e0,
+        [ joinpath(path,"ADM-6005a_$(i).msa") for i in 1:15 ], [
+        # DBSample, Union{Material, Missing}, String, Float64, Vector{Element}}
+        ( blkC, parse(Material,"Al"), joinpath(path,"Al std.msa"), e0, [ n"Al" ]),
+        ( blkC, parse(Material,"Fe"), joinpath(path,"Fe std.msa"), e0, [ n"Fe" ]),
+        ( blkC, parse(Material,"Ge"), joinpath(path,"Ge std.msa"), e0, [ n"Ge" ]),
+        ( blkC, parse(Material,"Si"), joinpath(path,"Si std.msa"), e0, [ n"Si" ]),
+        ( blkC, parse(Material,"SiO2"), joinpath(path,"SiO2 std.msa"), e0, [ n"Si", n"O", n"C" ]),
+        ( blkC, parse(Material,"Ti"), joinpath(path,"Ti std.msa"), e0, [ n"Ti" ]),
+        ( blkC, parse(Material,"Zn"), joinpath(path,"Zn std.msa"), e0, [ n"Zn" ]),
+        ( hiTC, parse(Material,"CaF2"), joinpath(path,"CaF2 std.msa"), e0, [ n"Ca", n"F", n"C" ])
+        ], [ n"C" ])
+
+    ffrs = NeXLSpectrum.fit(db, DBFitSpectra, cfs)
+
+    @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, rtol = 0.003)
     @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)
     @test isapprox(mean(value.(kratio(n"Al K-L3", ffr) for ffr in ffrs)), 0.0281, rtol = 0.004)
     @test isapprox(mean(value.(kratio(n"Ca K-L3", ffr) for ffr in ffrs)), 0.1211, rtol = 0.003)

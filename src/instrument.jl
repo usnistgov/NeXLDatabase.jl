@@ -44,11 +44,21 @@ function Base.read(db::SQLite.DB, ::Type{DBInstrument}, pkey::Int)::DBInstrument
     stmt1 = SQLite.Stmt(db, "SELECT * FROM INSTRUMENT WHERE PKEY=?;")
     q = DBInterface.execute(stmt1, (pkey,))
     if SQLite.done(q)
-        error("No known person with key '$(pkey)'.")
+        error("No known instrument with key '$(pkey)'.")
     end
     r = SQLite.Row(q)
     return DBInstrument(r[:PKEY], read(db, DBLaboratory, r[:LABKEY]), r[:VENDOR], r[:MODEL], r[:LOCATION])
 end
+
+function Base.findall(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory)::Vector{DBInstrument}
+    stmt1 = SQLite.Stmt(db, "SELECT * FROM INSTRUMENT WHERE LABKEY=?;")
+    q = DBInterface.execute(stmt1, (lab.pkey,))
+    if SQLite.done(q)
+        error("No known instruments for the laboratory '$(lab)'.")
+    end
+    return [ DBInstrument(r[:PKEY], lab, r[:VENDOR], r[:MODEL], r[:LOCATION]) for r in q ]
+end
+
 
 #CREATE TABLE DETECTOR (
 #    PKEY INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +85,7 @@ struct DBDetector
     minN::Int
 end
 
-Base.show(io::IO, det::DBDetector) = print(io, "$(det.vendor) $(det.model) on $(repr(det.instrument))")
+Base.show(io::IO, det::DBDetector) = print(io, "$(det.vendor) $(det.model) $(det.description) on $(repr(det.instrument))")
 
 function Base.write(
     db::SQLite.DB,
@@ -159,3 +169,9 @@ Base.convert(::Type{BasicEDS}, dbd::DBDetector, chCount::Int = 4096) = BasicEDS(
         'N' => elements[dbd.minN],
     ),
 )
+
+function Base.findall(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument)::Vector{DBDetector}
+    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM DETECTOR WHERE INSTRUMENT=?;")
+    q = DBInterface.execute(stmt1, (inst.pkey,))
+    return [ read(db, DBDetector, r[:PKEY]) for r in q ]
+end

@@ -29,9 +29,10 @@ function Base.read(db::SQLite.DB, ::Type{DBLaboratory}, pkey::Int)::DBLaboratory
     return DBLaboratory(r[:PKEY], r[:NAME], contact)
 end
 
-function readLaboratories(db::SQLite.DB)::DataFrame
+function Base.findall(db::SQLite.DB,::Type{DBLaboratory})::Vector{DBLaboratory}
     stmt1 = SQLite.Stmt(db, "SELECT * FROM LABORATORY;")
-    return DBInterface.execute(stmt1) |> DataFrame
+    q = DBInterface.execute(stmt1)
+    return [ DBLaboratory(r[:PKEY], r[:NAME], read(db, DBPerson, r[:CONTACT])) for r in q]
 end
 
 struct DBMember

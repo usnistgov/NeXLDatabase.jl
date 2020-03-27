@@ -10,6 +10,16 @@ struct DBSpectrum
     artifact::DBArtifact
 end
 
+function sniffFormat(fn)
+    if NeXLSpectrum.isemsa(fn)
+        return "EMSA"
+    elseif NeXLSpectrum.isAspexTIFF(fn)
+        return "ASPEX"
+    else
+        error("Unknown file type in $fn.")
+    end
+end
+
 function Base.write(#
         db::SQLite.DB, #
         ::Type{DBSpectrum}, #
@@ -43,7 +53,7 @@ function Base.write(#
         name::String, #
         filename::String,
         format::String)::Int
-    compIdx = ismissing(comp) ? -1 : write(db, comp)
+    compidx = ismissing(comp) ? -1 : write(db, comp)
     return write(db, DBSpectrum, det.pkey, e0, compidx, collectedBy.pkey, sample.pkey, collected, name, filename, format)
 end
 

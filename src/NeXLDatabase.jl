@@ -1,11 +1,12 @@
 module NeXLDatabase
 
-using NeXLCore
-using NeXLSpectrum
 using SQLite
 using Dates
 using DataFrames
 using IntervalSets
+using Reexport
+
+@reexport using NeXLSpectrum
 
 export openNeXLDatabase
 
@@ -30,7 +31,8 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "person", "laboratory", "labmembers", #
         "sample", "project", #
         "instrument", "detector", #
-        "artifact", "spectrum", "fitspec" #
+        "artifact", "spectrum", "fitspec", #
+        "kratio" #
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
@@ -50,6 +52,7 @@ include("artifact.jl")
 include("project.jl")
 include("spectrum.jl")
 include("fitspec.jl")
+include("helpers.jl")
 
 export DBPerson
 export DBLaboratory
@@ -66,6 +69,7 @@ export DBFitSpectra
 export DBFitSpectrum
 export DBReference
 
-export unknowns, references
+export unknowns, references, dbreferences
+export constructFitSpectra
 
 end # module
