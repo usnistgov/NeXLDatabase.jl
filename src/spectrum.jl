@@ -77,6 +77,7 @@ function Base.convert(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
     res[:Name] = dbspec.name
     res[:Sample] = repr(dbspec.sample)
     res[:Owner] = dbspec.collectedby.name
+    res[:Detector] = convert(BasicEDS, dbspec.detector, length(res))
     return res
 end
 

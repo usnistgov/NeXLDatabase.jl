@@ -30,6 +30,12 @@ function find(db::SQLite.DB, ::Type{DBSample}, owner::Int, parent::Int)::Vector{
     return [ read(db, DBSample, r[:PKEY]) for r in q ]
 end
 
+function find(db::SQLite.DB, ::Type{DBSample}, owner::DBLaboratory, name::String)::Union{DBSample,Nothing}
+    stmt = SQLite.Stmt(db,"SELECT PKEY FROM SAMPLE WHERE OWNER=? AND NAME=?;")
+    q = DBInterface.execute(stmt, (owner.pkey, name))
+    return SQLite.done(q) ? nothing : read(db, DBSample, SQLite.Row(q)[:PKEY])
+end
+
 Base.write(db::SQLite.DB, ::Type{DBSample}, ownerkey::Int, name::String, desc::String)::Int =
     write(db, DBSample, -1, ownerkey, name, desc)
 

@@ -10,7 +10,7 @@ CREATE TABLE KRATIO (
     REFERENCE INTEGER NOT NULL, -- Unknown material pkey
     REFE0 REAL NOT NULL,      -- Reference beam energy
     REFTOA REAL NOT NULL,     -- Reference take-off angle
-    PRIMARY TEXT NOT NULL,    -- Primary measured x-ray e.g. "Si K-L3"
+    PRINCIPAL TEXT NOT NULL,  -- Same as ELEMENT INNER-OUTER
     LINES TEXT NOT NULL,      -- List of all lines in fit e.g. "Si K-L3, Si K-L2, Si K-M2"
     FOREIGN KEY(UNKNOWN) REFERENCES MATERIAL(PKEY),
     FOREIGN KEY(REFERENCE) REFERENCES MATERIAL(PKEY)
