@@ -12,7 +12,7 @@ Base.show(io::IO, pr::DBProject) =
     print(io, (!ismissing(pr.parent) ? repr(pr.parent)*" : " : "")*pr.name)
 
 Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, createdBy::DBPerson)::Int =
-    write(db, DBProject, name, desc, createdBy, 0)
+    write(db, DBProject, name, desc, createdBy.pkey, 0)
 
 Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, createdBy::DBPerson, parent::DBProject)::Int =
     write(db, DBProject, name, desc, createdBy.pkey, parent.pkey)
@@ -60,7 +60,6 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, parentkey::Int, name::Strin
     parent = r[:PARENT] >= 0 ? read(db, DBProject, r[:PARENT]) : missing
     return DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
 end
-
 
 function Base.findall(db::SQLite.DB, ::Type{DBProject}, createdby::DBPerson)::Vector{DBProject}
     stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM PROJECT WHERE CREATEDBY=?;")

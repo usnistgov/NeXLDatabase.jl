@@ -10,7 +10,7 @@ end
 Base.show(io::IO, dbf::DBFitSpectrum) =
     print(io, "Fit[$(dbf.spectrum.name)]")
 
-Base.convert(::Type{Spectrum}, dbfs::DBFitSpectrum) = Base.convert(Spectrum, dbfs.spectrum)
+NeXLUncertainties.asa(::Type{Spectrum}, dbfs::DBFitSpectrum) = NeXLUncertainties.asa(Spectrum, dbfs.spectrum)
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectrum}, fitspectra::Int, spectrum::Int)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRUM(FITSPECTRA, SPECTRUM ) VALUES ( ?, ? );")
@@ -28,7 +28,7 @@ end
 Base.show(io::IO, dbr::DBReference) =
     print(io,"Reference[$(dbr.spectrum.name) with $(join(symbol.(dbr.elements),','))]")
 
-Base.convert(::Type{Spectrum}, dbr::DBReference) = Base.convert(Spectrum, dbr.spectrum)
+NeXLUncertainties.asa(::Type{Spectrum}, dbr::DBReference) = NeXLUncertainties.asa(Spectrum, dbr.spectrum)
 
 function Base.write(db::SQLite.DB, ::Type{DBReference}, fitspectra::Int, spectrum::Int, elements::Vector{Element})::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO REFERENCESPECTRUM(FITSPECTRA, SPECTRUM, ELEMENTS) VALUES ( ?, ?, ? );")
@@ -66,7 +66,7 @@ end
 Return a vector containing the spectra to be fit.
 """
 unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
-    map(fs->convert(Spectrum, fs), fbfs.fitspectrum)
+    map(fs->asa(Spectrum, fs), fbfs.fitspectrum)
 
 """
     references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum})

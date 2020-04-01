@@ -37,9 +37,9 @@ function Base.read(db::SQLite.DB, ::Type{DBArtifact}, pkey::Int)
 end
 
 Base.read(db::SQLite.DB, ::Type{Spectrum}, pkey::Int)::Spectrum =
-     convert(Spectrum, read(db,DBArtifact,pkey))
+     asa(Spectrum, read(db,DBArtifact,pkey))
 
-function Base.convert(::Type{Spectrum}, artifact::DBArtifact)::Spectrum
+function NeXLUncertainties.asa(::Type{Spectrum}, artifact::DBArtifact)::Spectrum
     if artifact.format=="EMSA"
         return readEMSA(IOBuffer(artifact.data), Float64)
     elseif artifact.format=="ASPEX"

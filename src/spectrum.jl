@@ -72,12 +72,13 @@ function Base.read(db::SQLite.DB, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
     return DBSpectrum( r[:PKEY], det, r[:BEAMENERGY], mat, coll, samp, r[:COLLECTED], r[:NAME], art)
 end
 
-function Base.convert(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
-    res = convert(Spectrum, dbspec.artifact)
+function NeXLUncertainties.asa(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
+    res = asa(Spectrum, dbspec.artifact)
     res[:Name] = dbspec.name
     res[:Sample] = repr(dbspec.sample)
     res[:Owner] = dbspec.collectedby.name
     res[:Detector] = convert(BasicEDS, dbspec.detector, length(res))
+    res[:PKEY] = dbspec.pkey
     return res
 end
 

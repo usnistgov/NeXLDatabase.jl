@@ -31,7 +31,7 @@ function constructFitSpectra(
     end
 end
 
-function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::Vector{FilterFitResult}
+function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, writekrs::Bool=false)::Vector{FilterFitResult}
     fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
     unks = unknowns(fs)
     det = convert(BasicEDS, fs.detector)
@@ -40,7 +40,7 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::Vecto
     frs = FilteredReference[]
 
     function filteredROIs(ref, elm)
-        spec, elms = convert(Spectrum, ref.spectrum), ref.elements
+        spec, elms = asa(Spectrum, ref.spectrum), ref.elements
         cxrl = NeXLDatabase.charXRayLabels(spec, elm, elms, det, 0.5e-4, e0)
         return filter(cxrl, ff, 1.0 / dose(spec))
     end
@@ -50,5 +50,14 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::Vecto
             append!(frs, filteredROIs(ref, elm))
         end
     end
-    return fit(unks, ff, frs)
+    ress = fit(unks, ff, frs)
+    if writekrs
+        @assert all(unk->haskey(unk, :Composition), unknowns) "All the unknowns must have the :Composition defined."
+        # Remove previous k-ratios for this DBFitSpectra
+        execute(SQLite.Stmt(db, "DELETE FROM KRATIO WHERE FITSPEC=?;"), (pkey, ))
+        for (res, unk) in zip(unknowns, ress)
+            write(db, DBKratio, fs, unk, unk[:Composition], res)
+        end
+    end
+    return ress
 end
