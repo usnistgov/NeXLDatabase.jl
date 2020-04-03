@@ -175,3 +175,9 @@ function Base.findall(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument)::Ve
     q = DBInterface.execute(stmt1, (inst.pkey,))
     return [ read(db, DBDetector, r[:PKEY]) for r in q ]
 end
+
+function find(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument, desc::String)::Union{DBDetector, Missing}
+    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM DETECTOR WHERE INSTRUMENT=? AND DESCRIPTION=?;")
+    q = DBInterface.execute(stmt1, (inst.pkey, desc))
+    return SQLite.done(q) ? missing : read(db, DBDetector, r[:PKEY])
+end

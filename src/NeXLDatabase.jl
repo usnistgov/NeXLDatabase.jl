@@ -28,10 +28,10 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     existing = SQLite.tables(db)
     tables = (
         "material", "massfraction", #
-        "person", "laboratory", "labmembers", #
+        "person", "laboratory", "labmember", #
         "sample", "project", #
         "instrument", "detector", #
-        "artifact", "spectrum", "fitspec", #
+        "artifact", "spectrum", "fitspectra", #
         "kratio" #
     )
     for tbl in tables
@@ -52,6 +52,7 @@ include("artifact.jl")
 include("project.jl")
 include("spectrum.jl")
 include("fitspec.jl")
+include("kratio.jl")
 include("helpers.jl")
 
 export DBPerson
@@ -68,6 +69,7 @@ export find
 export DBFitSpectra
 export DBFitSpectrum
 export DBReference
+export DBKRatio
 
 export unknowns, references, dbreferences
 export constructFitSpectra

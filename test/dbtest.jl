@@ -13,8 +13,8 @@ end
 
 # Download the necessary data using the Artifact mechanism from Google Drive
 zip = artifact"shooter0"
-dbname = ":memory:"
-#dbname = tempname()
+#dbname = ":memory:"
+dbname = "C:\\Users\\nritchie\\Desktop\\test.db" # tempname()
 db = openNeXLDatabase(dbname)
 ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
 ld2 = write(db, DBPerson, "Jeanne I. Bottle", "jib@gmail.com")
@@ -222,8 +222,8 @@ end
         ( blkC, parse(Material,"Zn"), joinpath(path,"Zn std.msa"), e0, [ n"Zn" ]),
         ( hiTC, parse(Material,"CaF2"), joinpath(path,"CaF2 std.msa"), e0, [ n"Ca", n"F", n"C" ])
         ], [ n"C" ])
-
-    ffrs = NeXLSpectrum.fit(db, DBFitSpectra, cfs)
+    unkcomp = read(db, Material, find(db,Material,"ADM6005a"))
+    ffrs = NeXLSpectrum.fit(db, DBFitSpectra, cfs, unkcomp)
 
     @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, rtol = 0.003)
     @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)

@@ -5,7 +5,7 @@ struct DBKRatio
     primary::CharXRay
     lines::Vector{CharXRay}
     mode::Char
-    unknown::Dict{Symbol,Any}
+    standard::Dict{Symbol,Any}
     reference::Dict{Symbol,Any}
     kratio::UncertainValue
 end
@@ -17,10 +17,10 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     r = SQLite.Row(q)
     primary = CharXRay(r[:ELEMENT], Transition(SubShell(r[:INNER]), SubShell(r[:OUTER])))
     lines = map(s -> parse(CharXRay, s), split(r[:LINES], ","))
-    unk = Dict(:BeamEnergy => r[:UNKE0], :TakeOffAngle => r[:UNKTOA], :Composition => read(db, Material, r[:UNKNOWN]))
+    std = Dict(:BeamEnergy => r[:STDE0], :TakeOffAngle => r[:STDTOA], :Composition => read(db, Material, r[:STANDARD]))
     ref = Dict(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
     kr = uv(r[:KRATIO], r[:DKRATIO])
-    return DBKRatio(pkey, r[:FITSPEC], primary, lines, r[:MODE], unk, ref, kr)
+    return DBKRatio(pkey, r[:FITSPEC], primary, lines, r[:MODE], std, ref, kr)
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, fitspec::Int)::Vector{DBKRatio}
@@ -31,34 +31,37 @@ end
 
 function Base.write(
     db::SQLite.DB,
-    ::Type{DBKratio},
+    ::Type{DBKRatio},
     fitspec::DBFitSpectra,
-    unk::Spectrum,
-    unkcomp::Material,
+    std::Spectrum,
+    stdcomp::Material,
     res::FilterFitResult,
 )
     stmt1 = SQLite.Stmt(
         db,
-        "INSERT INTO KRATIO(FITSPEC, ELEMENT, INNER, OUTER, MODE, UNKNOWN, UNKE0, UNKTOA, " *
-        "REFERENCE, REFE0, REFTOA, PRINCIPAL, LINES, KRATIO, DKRATIO) VALUES (" *
-        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        "INSERT INTO KRATIO(FITSPEC, ELEMENT, INNER, OUTER, MODE, STANDARD, STDNAME, STDE0, STDTOA, " *
+        "REFERENCE, REFNAME, REFE0, REFTOA, PRINCIPAL, LINES, KRATIO, DKRATIO) VALUES (" *
+        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     )
-    unkcompidx = write(db, unkcomp)
-    for lbl in filter(l -> l isa CharXRayLabel, labels(res))
+    stdcompidx = write(db, stdcomp)
+    for lbl in filter(l -> (l isa CharXRayLabel) && (value(res[l])>0.0), labels(res))
         ref, br = spectrum(lbl), brightest(lbl.xrays)
-        refcompidx = write(db, ref[:Composition])
+        refcomp = ref[:Composition]
+        refcompidx = write(db, refcomp)
         r = DBInterface.execute(
-            stmt,
-            ( #
+            stmt1,
+            (
                 fitspec.pkey, #
                 z(element(br)),
-                inner(br),
-                outer(br),
-                'E', #
-                unkcompidx,
-                unkspec[:BeamEnergy],
-                unkspec[:TakeOffAngle], #
+                inner(br).subshell.index,
+                outer(br).subshell.index,
+                "EDX", #
+                stdcompidx,
+                stdcomp.name,
+                std[:BeamEnergy],
+                std[:TakeOffAngle], #
                 refcompidx,
+                refcomp.name,
                 ref[:BeamEnergy],
                 ref[:TakeOffAngle], #
                 repr(br),

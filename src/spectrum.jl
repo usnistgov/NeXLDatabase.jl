@@ -79,6 +79,9 @@ function NeXLUncertainties.asa(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
     res[:Owner] = dbspec.collectedby.name
     res[:Detector] = convert(BasicEDS, dbspec.detector, length(res))
     res[:PKEY] = dbspec.pkey
+    if !ismissing(dbspec.composition)
+        res[:Composition] = dbspec.composition
+    end
     return res
 end
 

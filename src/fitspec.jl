@@ -7,15 +7,14 @@ struct DBFitSpectrum
     spectrum::DBSpectrum
 end
 
-Base.show(io::IO, dbf::DBFitSpectrum) =
-    print(io, "Fit[$(dbf.spectrum.name)]")
+Base.show(io::IO, dbf::DBFitSpectrum) = print(io, "Fit[$(dbf.spectrum.name)]")
 
 NeXLUncertainties.asa(::Type{Spectrum}, dbfs::DBFitSpectrum) = NeXLUncertainties.asa(Spectrum, dbfs.spectrum)
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectrum}, fitspectra::Int, spectrum::Int)::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRUM(FITSPECTRA, SPECTRUM ) VALUES ( ?, ? );")
-    q = DBInterface.execute(stmt1, ( fitspectra, spectrum ))
-    return  DBInterface.lastrowid(q)
+    q = DBInterface.execute(stmt1, (fitspectra, spectrum))
+    return DBInterface.lastrowid(q)
 end
 
 struct DBReference
@@ -26,14 +25,14 @@ struct DBReference
 end
 
 Base.show(io::IO, dbr::DBReference) =
-    print(io,"Reference[$(dbr.spectrum.name) with $(join(symbol.(dbr.elements),','))]")
+    print(io, "Reference[$(dbr.spectrum.name) with $(join(symbol.(dbr.elements),','))]")
 
 NeXLUncertainties.asa(::Type{Spectrum}, dbr::DBReference) = NeXLUncertainties.asa(Spectrum, dbr.spectrum)
 
 function Base.write(db::SQLite.DB, ::Type{DBReference}, fitspectra::Int, spectrum::Int, elements::Vector{Element})::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO REFERENCESPECTRUM(FITSPECTRA, SPECTRUM, ELEMENTS) VALUES ( ?, ?, ? );")
-    q = DBInterface.execute(stmt1, ( fitspectra, spectrum, _elmstostr(elements)))
-    return  DBInterface.lastrowid(q)
+    q = DBInterface.execute(stmt1, (fitspectra, spectrum, _elmstostr(elements)))
+    return DBInterface.lastrowid(q)
 end
 
 struct DBFitSpectra
@@ -54,9 +53,9 @@ function Base.show(io::IO, dbfs::DBFitSpectra)
     for dbf in dbfs.fitspectrum
         print(io, "\n\t$dbf")
     end
-    print(io,"\n==== References ====")
+    print(io, "\n==== References ====")
     for elm in dbfs.elements
-        print(io, "\n\t$(symbol(elm)) = $(join(dbreference(dbfs, elm),','))")
+        print(io, "\n\t$(symbol(elm)) = $(join(dbreferences(dbfs, elm),','))")
     end
 end
 
@@ -65,16 +64,14 @@ end
 
 Return a vector containing the spectra to be fit.
 """
-unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} =
-    map(fs->asa(Spectrum, fs), fbfs.fitspectrum)
+unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} = map(fs -> asa(Spectrum, fs), fbfs.fitspectrum)
 
 """
     references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum})
 
 Return a vector of the spectra which could be used as references for the Element.
 """
-references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
-    convert.(Spectrum, dbreference(fbfs, elm))
+references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} = convert.(Spectrum, dbreferences(fbfs, elm))
 
 """
     dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference}
@@ -82,43 +79,43 @@ references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} =
 Return a vector of the spectra which could be used as references for the Element as DBReference objects.
 """
 dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
-    collect(filter(rs->elm in rs.elements, fbfs.refspectrum))
+    collect(filter(rs -> elm in rs.elements, fbfs.refspectrum))
 
 PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
 
-_elmstostr(elms::Vector{Element}) = join(symbol.(elms),',')
-_strtoelms(str::String) = parse.(Element,strip.(split(str,',')))
+_elmstostr(elms::Vector{Element}) = join(symbol.(elms), ',')
+_strtoelms(str::String) = parse.(Element, strip.(split(str, ',')))
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element})::Int
     stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, ELEMENTS) VALUES( ?, ?, ?);")
-    q = DBInterface.execute(stmt1, ( projKey, detKey, _elmstostr(elms)))
-    return  DBInterface.lastrowid(q)
+    q = DBInterface.execute(stmt1, (projKey, detKey, _elmstostr(elms)))
+    return DBInterface.lastrowid(q)
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
     stmt1 = SQLite.Stmt(db, "SELECT * FROM FITSPECTRA WHERE PKEY=?;")
-    q1 = DBInterface.execute(stmt1, ( pkey, ))
+    q1 = DBInterface.execute(stmt1, (pkey,))
     if SQLite.done(q1)
         error("No fit spectra record with pkey = $pkey.")
     end
-    r1=SQLite.Row(q1)
-    @assert r1[:PKEY]==pkey "Mismatching pkey in DBFitSpectrum"
+    r1 = SQLite.Row(q1)
+    @assert r1[:PKEY] == pkey "Mismatching pkey in DBFitSpectrum"
     project = read(db, DBProject, r1[:PROJECT])
     detector = read(db, DBDetector, r1[:DETECTOR])
     elms = _strtoelms(r1[:ELEMENTS])
     stmt2 = SQLite.Stmt(db, "SELECT * FROM FITSPECTRUM WHERE FITSPECTRA=?;")
-    q2 = DBInterface.execute(stmt2, ( pkey, ))
+    q2 = DBInterface.execute(stmt2, (pkey,))
     tobefit = DBFitSpectrum[]
     for r2 in q2
-        @assert r2[:FITSPECTRA]==pkey
+        @assert r2[:FITSPECTRA] == pkey
         spec = read(db, DBSpectrum, r2[:SPECTRUM])
         push!(tobefit, DBFitSpectrum(pkey, spec))
     end
     stmt3 = SQLite.Stmt(db, "SELECT * FROM REFERENCESPECTRUM WHERE FITSPECTRA=?;")
-    q3 = DBInterface.execute(stmt3, ( pkey, ))
+    q3 = DBInterface.execute(stmt3, (pkey,))
     refs = DBReference[]
     for r3 in q3
-        @assert r3[:FITSPECTRA]==pkey
+        @assert r3[:FITSPECTRA] == pkey
         spec = read(db, DBSpectrum, r3[:SPECTRUM])
         push!(refs, DBReference(r3[:PKEY], r3[:FITSPECTRA], spec, _strtoelms(r3[:ELEMENTS])))
     end
@@ -126,10 +123,10 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
 end
 
 function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
-    stmt1 = SQLite.Stmt(db,"DELETE FROM FITSPECTRA WHERE PKEY=?;")
-    stmt2 = SQLite.Stmt(db,"DELETE FROM REFERENCESPECTRUM WHERE FITSPECTRA=?;")
-    stmt3 = SQLite.Stmt(db,"DELETE FROM FITSPECTRUM WHERE FITSPECTRA=?;")
-    DBInterface.execute(stmt3, (pkey, ))
-    DBInterface.execute(stmt2, (pkey, ))
-    DBInterface.execute(stmt1, (pkey, ))
+    stmt1 = SQLite.Stmt(db, "DELETE FROM FITSPECTRA WHERE PKEY=?;")
+    stmt2 = SQLite.Stmt(db, "DELETE FROM REFERENCESPECTRUM WHERE FITSPECTRA=?;")
+    stmt3 = SQLite.Stmt(db, "DELETE FROM FITSPECTRUM WHERE FITSPECTRA=?;")
+    DBInterface.execute(stmt3, (pkey,))
+    DBInterface.execute(stmt2, (pkey,))
+    DBInterface.execute(stmt1, (pkey,))
 end
