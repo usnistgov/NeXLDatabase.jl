@@ -85,6 +85,19 @@ struct DBDetector
     minN::Int
 end
 
+function NeXLUncertainties.asa(::Type{DataFrame}, det::DBDetector)::DataFrame
+    prop, value = String[], String[]
+    push!(prop,"Laboratory"), push!(value, det.instrument.laboratory.name)
+    push!(prop,"Instrument"), push!(value, "$(det.instrument.vendor) $(det.instrument.model)")
+    push!(prop,"Detector"), push!(value, "$(det.vendor) $(det.model): $(det.description)")
+    push!(prop,"Resolution"), push!(value, "$(det.resolution) eV")
+    push!(prop,"LLD"), push!(value, "$(det.lld) channels")
+    push!(prop,"Energy"), push!(value, "$(det.zero) + $(det.gain)·i [eV]")
+    sym(z) = elements[z].symbol
+    push!(prop,"Visible"), push!(value, "K: Z>=$(sym(det.minK)), L: Z>=$(sym(det.minL)),  M: Z>=$(sym(det.minM)), N: Z>=$(sym(det.minN))")
+    return DataFrame(Property=prop, Value=value)
+end
+
 Base.show(io::IO, det::DBDetector) = print(io, "$(det.vendor) $(det.model) $(det.description) on $(repr(det.instrument))")
 
 function Base.write(

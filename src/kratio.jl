@@ -4,10 +4,16 @@ struct DBKRatio
     fitspectra::Int
     primary::CharXRay
     lines::Vector{CharXRay}
-    mode::Char
+    mode::String
     standard::Dict{Symbol,Any}
     reference::Dict{Symbol,Any}
     kratio::UncertainValue
+end
+
+function Base.show(io::IO, kr::DBKRatio)
+    print(io, "K[($(name(kr.standard[:Composition])) @ $(kr.standard[:BeamEnergy]/1.0e3) keV)/"*
+              "($(name(kr.reference[:Composition])) @ $(kr.reference[:BeamEnergy]/1.0e3) keV),"*
+              "$(kr.lines)] = $(kr.kratio)")
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
@@ -24,9 +30,36 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, fitspec::Int)::Vector{DBKRatio}
-    stmt = SQLite.Stmt(db, "SELECT * FROM KRATIO WHERE FITSPEC=?;")
-    q = DBInterface.execute(stmt, (fitspec,))
-    return [read(db, DBKRatio, r[:PKEY]) for r in q]
+    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE FITSPEC=?;")
+    return [read(db, DBKRatio, r[:PKEY]) for r in DBInterface.execute(stmt, (fitspec,))]
+end
+
+function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio})
+    fm, sm = Union{Float64, Missing}, Union{String, Missing}
+    fs, prim, lines, stde0, stdtoa, stdcomp = Int[], CharXRay[], String[], fm[], fm[], sm[]
+    refe0, reftoa, refcomp, krv, dkrv = fm[], fm[], sm[], Float64[], Float64[]
+    for kr in krs
+        push!(fs, kr.fitspectra)
+        push!(prim, kr.primary)
+        push!(lines, repr(kr.lines))
+        std = kr.standard
+        push!(stde0, get(std,:BeamEnergy, missing))
+        push!(stdtoa, get(std,:TakeOffAngle, missing))
+        push!(stdcomp, haskey(std,:Composition) ? name(std[:Composition]) : :missing)
+        ref = kr.reference
+        push!(refe0, get(ref,:BeamEnergy, missing))
+        push!(reftoa, get(ref,:TakeOffAngle, missing))
+        push!(refcomp, haskey(ref,:Composition) ? name(ref[:Composition]) : :missing)
+        push!(krv, value(kr.kratio))
+        push!(dkrv, σ(kr.kratio))
+    end
+    return DataFrame(Batch=fs,Primary=prim,All=lines,E0std=stde0,TOAstd=stdtoa,Cstd=stdcomp,
+        E0ref=refe0, TOAref=reftoa, Cref=refcomp, K=krv, ΔK=dkrv)
+end
+
+function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, filter::String, args::Tuple)::Vector{DBKRatio}
+    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE "*filter*";")
+    return [read(db, DBKRatio, r[:PKEY]) for r in DBInterface.execute(stmt, args)]
 end
 
 function Base.write(

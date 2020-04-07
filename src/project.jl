@@ -9,7 +9,7 @@ struct DBProject
 end
 
 Base.show(io::IO, pr::DBProject) =
-    print(io, (!ismissing(pr.parent) ? repr(pr.parent)*" : " : "")*pr.name)
+    print(io, pr.name*(!ismissing(pr.parent) ? " <= "*repr(pr.parent) : ""))
 
 Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, createdBy::DBPerson)::Int =
     write(db, DBProject, name, desc, createdBy.pkey, 0)

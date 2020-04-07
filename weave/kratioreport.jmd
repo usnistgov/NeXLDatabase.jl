@@ -1,0 +1,59 @@
+```julia; echo=false
+using NeXLSpectrum
+using NeXLDatabase
+using DataFrames
+using Gadfly
+using Weave
+
+db = WEAVE_ARGS[:Database]
+fspkey = WEAVE_ARGS[:FitSpectra]
+fs = read(db, DBFitSpectra, fspkey);
+```
+# K-ratio Report
+This report summarizes the measured k-ratios from a single measurement campaign.  A measurement campaign is defined here
+as multiple measurements of a single material and all the associated reference spectra.
+
+##### Project
+```julia; echo=false
+asa(DataFrame, fs)
+```
+
+##### Unknown Spectra
+The spectra from which x-ray intensity data will be extracted using reference spectra.
+```julia; echo=false
+asa(DataFrame, fs.fitspectrum)
+```
+
+##### Reference Spectra
+The spectra against which the unknown spectra will be compared.
+```julia; echo=false
+asa(DataFrame, fs.refspectrum)
+```
+##### Results
+The k-ratio is the ratio of the intensity in the unknown to the intensity in the reference for a specific set of
+characteristic x-ray lines.
+```julia; echo=false
+ffrs = NeXLSpectrum.fit(db, DBFitSpectra, fspkey)
+res=asa(DataFrame, ffrs)
+```
+##### Statistics
+Summary statistics for the k-ratio data.
+```julia; echo=false
+describe(res, :mean, :std, :min, :q25, :median, :q75, :max, cols=names(res)[2:end])
+```
+
+##### Residuals
+The residuals show how well the reference spectra fit the unknown spectra.
+```julia; echo=false; fig_ext=".svg"; fig_width=10; fig_height=4;
+for ffr in ffrs
+  display(plot(ffr))
+end;
+```
+
+##### K-ratios
+This table summarizes the k-ratio data as recorded in the k-ratio database.  It should reflect the same information
+as above unless a change in the fit algorithm has made it stale.
+
+```julia; echo=false
+asa(DataFrame, findall(db, DBKRatio, fspkey))
+```
