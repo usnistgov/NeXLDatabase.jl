@@ -36,7 +36,7 @@ function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
         @assert r2[:MATKEY]==row
         z, c, uc, a = r2[:MFZ], r2[:MFC], r2[:MFUC], r2[:MFA]
         massfrac[z] = uv(c,uc)
-        a>=0 && (aa[z]=a)
+        a>0.0 && (aa[z]=a)
     end
     return Material(r1[:MATNAME], massfrac, den, aa, desc)
 end

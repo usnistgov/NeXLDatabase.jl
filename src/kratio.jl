@@ -1,3 +1,4 @@
+using NeXLMatrixCorrection
 
 struct DBKRatio
     pkey::Int
@@ -34,27 +35,46 @@ function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, fitspec::Int)::Vector{DBK
     return [read(db, DBKRatio, r[:PKEY]) for r in DBInterface.execute(stmt, (fitspec,))]
 end
 
-function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio})
-    fm, sm = Union{Float64, Missing}, Union{String, Missing}
-    fs, prim, lines, stde0, stdtoa, stdcomp = Int[], CharXRay[], String[], fm[], fm[], sm[]
-    refe0, reftoa, refcomp, krv, dkrv = fm[], fm[], sm[], Float64[], Float64[]
+function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio}; withComputedKs::Bool=false)
+    fm, sm, cm = Union{Float64, Missing}, Union{String, Missing}, Union{Material, Missing}
+    fs, lines, stde0, stdtoa, stdcomp = Int[], String[], fm[], fm[], cm[]
+    refe0, reftoa, refcomp, krv, dkrv, cks, ratio = fm[], fm[], cm[], Float64[], Float64[], fm[], fm[]
     for kr in krs
         push!(fs, kr.fitspectra)
-        push!(prim, kr.primary)
         push!(lines, repr(kr.lines))
         std = kr.standard
         push!(stde0, get(std,:BeamEnergy, missing))
         push!(stdtoa, get(std,:TakeOffAngle, missing))
-        push!(stdcomp, haskey(std,:Composition) ? name(std[:Composition]) : :missing)
+        push!(stdcomp, get(std,:Composition, missing))
         ref = kr.reference
         push!(refe0, get(ref,:BeamEnergy, missing))
         push!(reftoa, get(ref,:TakeOffAngle, missing))
-        push!(refcomp, haskey(ref,:Composition) ? name(ref[:Composition]) : :missing)
+        push!(refcomp, get(ref,:Composition, missing))
         push!(krv, value(kr.kratio))
         push!(dkrv, σ(kr.kratio))
+        if withComputedKs
+            elm = element(kr.lines[1])
+            if any(ismissing.( (stdcomp[end], stde0[end], stdtoa[end], refcomp[end], refe0[end], reftoa[end]) )) ||
+                (NeXLCore.nonneg(stdcomp[end], elm)<1.0e-6) || (NeXLCore.nonneg(refcomp[end], elm)<1.0e-6)
+                push!(cks, missing)
+                push!(ratio, missing)
+            else
+                br = [ kr.primary ]
+                zs = ZAF(XPP, ReedFluorescence, stdcomp[end], br, stde0[end])
+            	zr = ZAF(XPP, ReedFluorescence, refcomp[end], br, refe0[end])
+            	k = gZAFc(zs, zr, stdtoa[end], reftoa[end]) * NeXLCore.nonneg(stdcomp[end], elm) /
+                    NeXLCore.nonneg(refcomp[end],elm)
+                push!(cks, k)
+                push!(ratio, value(kr.kratio) / k)
+            end
+        end
     end
-    return DataFrame(Batch=fs,Primary=prim,All=lines,E0std=stde0,TOAstd=stdtoa,Cstd=stdcomp,
-        E0ref=refe0, TOAref=reftoa, Cref=refcomp, K=krv, ΔK=dkrv)
+    res = DataFrame(Batch=fs,Lines=lines,E0std=stde0,TOAstd=stdtoa,Cstd=stdcomp,E0ref=refe0, TOAref=reftoa, Cref=refcomp, K=krv, ΔK=dkrv)
+    if withComputedKs
+        insertcols!(res, ncol(res)+1, :Kxpp=>cks)
+        insertcols!(res, ncol(res)+1, :Ratio=>ratio)
+    end
+    return res
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, filter::String, args::Tuple)::Vector{DBKRatio}
