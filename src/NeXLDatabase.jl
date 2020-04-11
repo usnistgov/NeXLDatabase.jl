@@ -71,7 +71,7 @@ export DBFitSpectrum
 export DBReference
 export DBKRatio
 
-export unknowns, references, dbreferences
+export measured, references, dbreferences
 export constructFitSpectra
 
 end # module

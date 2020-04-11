@@ -5,10 +5,10 @@ CREATE TABLE KRATIO (
     INNER INT NOT NULL,       -- Inner shell of primary line K->1, L1->2, ..., M1->5, ..., N1->10, etc
     OUTER INT NOT NULL,       -- Outer shell of primary line K->1, L1->2, ..., M1->5, ..., N1->10, etc
     MODE TEXT NOT NULL,       -- 'EDX' or 'WDS'
-    STANDARD INTEGER NOT NULL, -- Standard material pkey
-    STDNAME TEXT NOT NULL,     -- Human friendly name of standard
-    STDE0 REAL NOT NULL,      -- Standard beam energy
-    STDTOA REAL NOT NULL,     -- Standard take-off angle
+    MEASURED INTEGER NOT NULL, -- Measured material pkey
+    MEASNAME TEXT NOT NULL,     -- Human friendly name of measured
+    MEASE0 REAL NOT NULL,      -- Standard beam energy
+    MEASTOA REAL NOT NULL,     -- Standard take-off angle
     REFERENCE INTEGER NOT NULL, -- Reference material pkey
     REFNAME TEXT NOT NULL,
     REFE0 REAL NOT NULL,      -- Reference beam energy
@@ -17,7 +17,7 @@ CREATE TABLE KRATIO (
     LINES TEXT NOT NULL,      -- List of all lines in fit e.g. "Si K-L3, Si K-L2, Si K-M2"
     KRATIO REAL NOT NULL,     -- The k-ratio
     DKRATIO REAL NOT NULL,    -- The 1-sigma standard uncertainty
-    FOREIGN KEY(STANDARD) REFERENCES MATERIAL(PKEY),
+    FOREIGN KEY(MEASURED) REFERENCES MATERIAL(PKEY),
     FOREIGN KEY(REFERENCE) REFERENCES MATERIAL(PKEY),
     FOREIGN KEY(FITSPEC) REFERENCES FITSPECTRA(PKEY)
 );

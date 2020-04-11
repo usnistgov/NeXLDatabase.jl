@@ -1,4 +1,3 @@
-MaybeMaterial = Union{Material, Missing}
 
 function constructFitSpectra(
     db::SQLite.DB,
@@ -8,20 +7,20 @@ function constructFitSpectra(
     detector::DBDetector, # The detector on which the data was collected
     analyst::DBPerson, # The person who collected the data
     e0::Float64, # The beam energy for the unknown in eV
-    unkSpectra::Vector{String}, # The files containing the unknown
-    stdSpectra::Vector{Tuple{DBSample, Material, String, Float64, Vector{Element}}}, # The standard spectra (sample, material, filename, e0, extra elements)
+    measSpectra::Vector{String}, # The files containing the measured spectra
+    refSpectra::Vector{Tuple{DBSample, Material, String, Float64, Vector{Element}}}, # The reference spectra (sample, material, filename, e0, extra elements)
     extraElms::AbstractVector{Element} = [], #
 )::Int
     SQLite.transaction(db) do # All or nothing...
         elms = ismissing(unkComp) ? extraElms : append!(collect(keys(unkComp)), extraElms)
         fitspectra = write(db, DBFitSpectra, project.pkey, detector.pkey, elms)
         dt = now()
-        for fn in unkSpectra
+        for fn in measSpectra
             format, name = sniffFormat(fn), splitext(splitdir(fn)[2])[1]
             spec = write(db, DBSpectrum, detector, e0, unkComp, analyst, sample, dt, name, fn, format)
             write(db, NeXLDatabase.DBFitSpectrum, fitspectra, spec)
         end
-        for (samp, std, fn, e0s, elms) in stdSpectra
+        for (samp, std, fn, e0s, elms) in refSpectra
             format, name = sniffFormat(fn), splitext(splitdir(fn)[2])[1]
             spec = write(db, DBSpectrum, detector, e0s, std, analyst, sample, dt, name, fn, format)
             refelms = ismissing(std) ? elms : append!(collect(keys(std)), elms)
@@ -33,7 +32,7 @@ end
 
 function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcomp::Union{Material, Nothing}=nothing)::Vector{FilterFitResult}
     fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
-    unks = unknowns(fs)
+    unks = measured(fs)
     det = convert(BasicEDS, fs.detector)
     ff = buildfilter(det)
     e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)

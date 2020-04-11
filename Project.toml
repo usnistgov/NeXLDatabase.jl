@@ -1,6 +1,7 @@
 name = "NeXLDatabase"
 uuid = "3a8e364e-c0ba-44cd-b67d-54dc3f0f4eb2"
 authors = ["Nicholas W.M. Ritchie <nicholas.wm.ritchie@gmail.com>"]
+repo-url = "https://github.com/NicholasWMRitchie/NeXLDatabase.jl"
 version = "0.1.0"
 
 [deps]
@@ -11,8 +12,22 @@ FFAST = "10506e09-08cd-5f0b-aee5-631de1bcc925"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
 NeXLCore = "93a0284f-3680-435e-8d39-dd6e52a1dbc8"
+NeXLMatrixCorrection = "3ab34fdf-2fe8-473b-9b20-30f5809db337"
 NeXLSpectrum = "6c578565-ca7f-4012-afc4-b8412d85af92"
 NeXLUncertainties = "7127f3d6-1721-46bc-bb38-8fc703dd438e"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SQLite = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+
+[compat]
+julia = "1"
+NeXLUncertainties = "0.1"
+NeXLCore = "0.1"
+NeXLMatrixCorrection = "0.1"
+NeXLSpectrum = "0.1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

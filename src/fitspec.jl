@@ -99,11 +99,11 @@ function Base.show(io::IO, dbfs::DBFitSpectra)
 end
 
 """
-    unknowns(fbfs::DBFitSpectra)::Vector{Spectrum}
+    measured(fbfs::DBFitSpectra)::Vector{Spectrum}
 
 Return a vector containing the spectra to be fit.
 """
-unknowns(fbfs::DBFitSpectra)::Vector{Spectrum} = map(fs -> asa(Spectrum, fs), fbfs.fitspectrum)
+measured(fbfs::DBFitSpectra)::Vector{Spectrum} = map(fs -> asa(Spectrum, fs), fbfs.fitspectrum)
 
 """
     references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum})

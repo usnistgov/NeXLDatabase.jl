@@ -1,6 +1,5 @@
 ```julia; echo=false
 using NeXLSpectrum
-using NeXLMatrixCorrection
 using NeXLDatabase
 using DataFrames
 using Gadfly
@@ -8,18 +7,17 @@ using Gadfly
 db, fspkey = WEAVE_ARGS[:Database], WEAVE_ARGS[:FitSpectra]
 fs = read(db, DBFitSpectra, fspkey);
 ```
-# K-ratio Report
-This report summarizes the measured k-ratios from a single measurement campaign.  A measurement campaign is multiple
-measurements of a single material and necessary the associated reference spectra.
+# Quantification Report
+This report details quantifying a set of related spectra.
 
 ##### Project
-Details about who collected what, where anasad using what instrumentation.
+Details about who collected what, where and using what instrumentation.
 ```julia; echo=false
 asa(DataFrame, fs)
 ```
 
 ##### Measured Spectra
-The spectra from which x-ray intensity data will be extracted using the reference spectra.
+The spectra which will be quantified using the reference spectra.
 ```julia; echo=false
 asa(DataFrame, fs.fitspectrum)
 ```
@@ -32,7 +30,15 @@ reference.
 ```julia; echo=false
 asa(DataFrame, fs.refspectrum)
 ```
-##### K-ratio Results
+#### Quantification Results
+```julia
+function quantify(ffr::FilterFitResult)::
+bestKs = optimizeks(SimpleKRatioOptimizer(1.5), kratios(ffr))::Vector{KRatio}
+return iterateks(Iteration(XPP,ReedFluorescence), "Result", bestKs)
+
+
+
+##### K-ratios
 The k-ratio is the ratio of the intensity in the measured to the intensity in the reference for a specific set of
 characteristic x-ray lines.
 ```julia; echo=false
@@ -51,30 +57,4 @@ The residuals show how well the reference spectra fit the unknown spectra.
 for ffr in ffrs
   display(plot(ffr))
 end;
-```
-
-##### Quantification Results
-Estimate the composition that would produce the measured k-ratios according to the XPP/Reed matrix correction algorithms.
-```julia; echo=false;
-q=asa(DataFrame, map(ffr->quantify(ffr,[n"C"]), ffrs))
-display(q)
-describe(q, :mean, :std, :min, :q25, :median, :q75, :max,cols=names(q)[2:end])
-```
-
-##### K-ratios
-This table summarizes the k-ratio data as recorded in the k-ratio database.  It should reflect the same information
-as above unless a change in the fit algorithm has made it stale. (If no composition has been associated with the
-measured this table will be empty.)
-
-```julia; echo=false
-krs = findall(db, DBKRatio, fspkey)
-if length(krs)>0
-  try
-    asa(DataFrame, krs, withComputedKs=true)
-  catch
-    asa(DataFrame, krs, withComputedKs=false)
-  end
-else
-  display("No k-ratios are available for this set of spectra.")
-end
 ```
