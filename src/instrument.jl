@@ -175,11 +175,11 @@ Base.convert(::Type{BasicEDS}, dbd::DBDetector, chCount::Int = 4096) = BasicEDS(
     dbd.gain,
     dbd.resolution,
     dbd.lld, #
-    Dict{Char,Element}(
-        'K' => elements[dbd.minK],
-        'L' => elements[dbd.minL], #
-        'M' => elements[dbd.minM],
-        'N' => elements[dbd.minN],
+    Dict{Shell,Element}(
+        Shell(1) => elements[dbd.minK],
+        Shell(2) => elements[dbd.minL], #
+        Shell(3) => elements[dbd.minM],
+        Shell(4) => elements[dbd.minN],
     ),
 )
 

@@ -13,8 +13,9 @@ end
 
 # Download the necessary data using the Artifact mechanism from Google Drive
 zip = artifact"shooter0"
-#dbname = ":memory:"
-dbname = "C:\\Users\\nritchie\\Desktop\\test.db" # tempname()
+dbname = ":memory:"
+# dbname = "C:\\Users\\nritchie\\Desktop\\test.db" # tempname()
+(dbname!=":memory:") && (rm(dbname, force=true)==nothing)
 db = openNeXLDatabase(dbname)
 ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
 ld2 = write(db, DBPerson, "Jeanne I. Bottle", "jib@gmail.com")
@@ -225,13 +226,13 @@ end
     unkcomp = read(db, Material, find(db,Material,"ADM6005a"))
     ffrs = NeXLSpectrum.fit(db, DBFitSpectra, cfs, unkcomp)
 
-    @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, rtol = 0.003)
+    @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, atol = 0.002)
     @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)
-    @test isapprox(mean(value.(kratio(n"Al K-L3", ffr) for ffr in ffrs)), 0.0281, rtol = 0.004)
+    @test isapprox(mean(value.(kratio(n"Al K-L3", ffr) for ffr in ffrs)), 0.0281, atol = 0.002)
     @test isapprox(mean(value.(kratio(n"Ca K-L3", ffr) for ffr in ffrs)), 0.1211, rtol = 0.003)
     @test isapprox(mean(value.(kratio(n"Zn L3-M5", ffr) for ffr in ffrs)), 0.0700, rtol = 0.05)
     @test isapprox(mean(value.(kratio(n"Zn K-L3", ffr) for ffr in ffrs)), 0.1115, atol = 0.0005)
-    @test isapprox(mean(value.(kratio(n"Zn K-M3", ffr) for ffr in ffrs)), 0.1197, atol = 0.0002)
+    @test isapprox(mean(value.(kratio(n"Zn K-M3", ffr) for ffr in ffrs)), 0.1197, atol = 0.002)
     @test isapprox(mean(value.(kratio(n"Ti L3-M3", ffr) for ffr in ffrs)), 0.0541, atol = 0.22)
     @test isapprox(mean(value.(kratio(n"Ti K-L3", ffr) for ffr in ffrs)), 0.064, atol = 0.001)
     @test isapprox(mean(value.(kratio(n"Ti K-M3", ffr) for ffr in ffrs)), 0.064, rtol = 0.06)
@@ -239,3 +240,6 @@ end
     @test isapprox(mean(value.(kratio(n"Ge K-L3", ffr) for ffr in ffrs)), 0.2628, atol = 0.001)
     @test isapprox(mean(value.(kratio(n"Ge K-M3", ffr) for ffr in ffrs)), 0.279, atol = 0.011)
 end
+
+db=nothing
+GC.gc()
