@@ -10,8 +10,8 @@ function Base.write(db::SQLite.DB, mat::Material; atol=0.0, rtol=0.0001)::Int
             error("$(mat.name) has already been defined as $(mat).")
         end
     else
-        stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY, MATSOURCE) VALUES ( ?, ?, ?, ? );")
-        r = DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, missing), get(mat, :Provenance, missing)))
+        stmt1 = SQLite.Stmt(db, "INSERT INTO MATERIAL (MATNAME, MATDESCRIPTION, MATDENSITY, MATPEDIGREE) VALUES ( ?, ?, ?, ? );")
+        r = DBInterface.execute(stmt1, (name(mat), get(mat, :Description, ""), get(mat, :Density, missing), get(mat, :Pedigree, missing)))
         res = DBInterface.lastrowid(r)
         stmt2 = SQLite.Stmt(db, "SELECT PKEY FROM MATERIAL WHERE MATNAME=?;")
         pkey = (DBInterface.execute(stmt2, (name(mat), )) |> DataFrame)[end,:PKEY]

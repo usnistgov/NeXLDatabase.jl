@@ -1,12 +1,6 @@
 using Mmap
 using SQLite
-
-#CREATE TABLE ARTIFACT (
-#    PKEY INTEGER PRIMARY KEY AUTOINCREMENT,
-#    FORMAT TEXT NOT NULL, -- EMSA, TIFF, PNG etc
-#    FILENAME TEXT NOT NULL, -- Source filename
-#    DATA BLOB NOT NULL
-#);
+using SHA
 
 struct DBArtifact
     pkey::Int
@@ -20,10 +14,22 @@ Base.show(io::IO, art::DBArtifact) = print(io, "Format: $(art.format)\nSource: $
 function Base.write(db::SQLite.DB, ::Type{DBArtifact}, filename::String, format::String)::Int
     @assert isfile(filename) "No such file in write artifact to database: $filename"
     @assert stat(filename).size > 0 "Null file in write artifact to database: $filename"
-    data = Mmap.mmap(filename, Vector{UInt8}, (stat(filename).size, ))
-    stmt1 = SQLite.Stmt(db, "INSERT INTO ARTIFACT ( FORMAT, FILENAME, DATA) VALUES ( ?, ?, ? );")
-    results = DBInterface.execute(stmt1, ( uppercase(format), filename, data ))
-    return  DBInterface.lastrowid(results)
+    # Check by SHA256 whether the artifact already exists in the database
+    sha=open(filename) do f
+           bytes2hex(sha2_256(f))
+    end
+    stmt0 = SQLite.Stmt(db, "SELECT PKEY FROM ARTIFACT WHERE SHA256=?;")
+    sr = DBInterface.execute(stmt0, (sha,))
+    if SQLite.done(sr)
+        data = Mmap.mmap(filename, Vector{UInt8}, (stat(filename).size, ))
+        stmt1 = SQLite.Stmt(db, "INSERT INTO ARTIFACT ( FORMAT, FILENAME, DATA, SHA256) VALUES ( ?, ?, ?, ? );")
+        results = DBInterface.execute(stmt1, ( uppercase(format), filename, data, sha ))
+        return  DBInterface.lastrowid(results)
+    else
+        #pk = SQLite.Row(sr)[:PKEY]
+        #@warn "$(basename(filename)) already exists in the database as PKEY=$pk."
+        return SQLite.Row(sr)[:PKEY]
+    end
 end
 
 function Base.read(db::SQLite.DB, ::Type{DBArtifact}, pkey::Int)

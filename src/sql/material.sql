@@ -3,8 +3,8 @@ CREATE TABLE MATERIAL (
     MATNAME TEXT NOT NULL, -- Make material name unique
     MATDESCRIPTION TEXT,
     MATDENSITY REAL,
-    MATSOURCE TEXT -- Source of compositional data (SRM/stoich/wet chemistry/???)
+    MATPEDIGREE TEXT -- Source of compositional data (SRM/stoich/wet chemistry/???)
 );
 
-INSERT INTO MATERIAL ( MATNAME, MATDESCRIPTION, MATDENSITY, MATSOURCE ) VALUES ( "Unknown", "Unknown material", 0.0, "" );
+INSERT INTO MATERIAL ( MATNAME, MATDESCRIPTION, MATDENSITY, MATPEDIGREE ) VALUES ( "Unknown", "Unknown material", 0.0, "" );
 CREATE INDEX MATNAME_INDEX ON MATERIAL(MATNAME);

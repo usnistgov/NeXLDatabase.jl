@@ -9,7 +9,7 @@ function constructFitSpectra(
     e0::Float64, # The beam energy for the unknown in eV
     measSpectra::Vector{String}, # The files containing the measured spectra
     refSpectra::Vector{Tuple{DBSample, Material, String, Float64, Vector{Element}}}, # The reference spectra (sample, material, filename, e0, extra elements)
-    extraElms::AbstractVector{Element} = [], #
+    extraElms::AbstractVector{Element} = Element[], #
 )::Int
     SQLite.transaction(db) do # All or nothing...
         elms = ismissing(unkComp) ? extraElms : append!(collect(keys(unkComp)), extraElms)
