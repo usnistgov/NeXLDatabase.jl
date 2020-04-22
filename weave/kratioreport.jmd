@@ -5,7 +5,7 @@ using NeXLDatabase
 using DataFrames
 using Gadfly
 
-db, fspkey = WEAVE_ARGS[:Database], WEAVE_ARGS[:FitSpectra]
+db, fspkey = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpectra]
 fs = read(db, DBFitSpectra, fspkey);
 ```
 # K-ratio Report
