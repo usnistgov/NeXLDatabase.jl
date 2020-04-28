@@ -78,7 +78,7 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
 end
 
 NeXLUncertainties.asa(::Type{KRatio}, dbkr::DBKRatio)::KRatio =
-    KRatio(element(dbkr.primary), dbkr.lines, dbkr.measured, dbkr.reference, dbkr.reference[:Composition], dbkr.kratio)
+    KRatio(dbkr.lines, dbkr.measured, dbkr.reference, dbkr.reference[:Composition], dbkr.kratio)
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, filter::String, args::Tuple)::Vector{DBKRatio}
     stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE "*filter*";")

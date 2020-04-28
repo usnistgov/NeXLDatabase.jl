@@ -5,6 +5,7 @@ using Dates
 using DataFrames
 using IntervalSets
 using Reexport
+using Requires
 
 @reexport using NeXLSpectrum
 
@@ -73,5 +74,9 @@ export DBKRatio
 
 export measured, references, dbreferences
 export constructFitSpectra
+
+function __init__()
+    @require Gadfly = "c91e804a-d5a3-530f-b6f0-dfbca275c004" include("gadflysupport.jl")
+end
 
 end # module

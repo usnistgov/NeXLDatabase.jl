@@ -1,0 +1,33 @@
+# Exploring K-ratios
+
+```julia
+using NeXLDatabase
+using Gadfly
+
+db=openNeXLDatabase("C:\\Users\\nritchie\\Documents\\Spectra\\k-ratio_database_project_2019\\kratio.db")
+```
+
+#### Fe K & L
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Fe"), )))
+```
+
+#### Cr K & L
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Cr"), )))
+```
+
+#### Ni K & L
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Ni"), )))
+```
+
+#### Zn K & L
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Zn"), )))
+```
+
+#### S K
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"S"), )))
+```
