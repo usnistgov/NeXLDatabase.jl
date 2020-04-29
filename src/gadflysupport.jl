@@ -9,8 +9,8 @@ function Gadfly.plot(dbkrs::AbstractArray{DBKRatio})
     matcolors=Dict{String,RGB{Float64}}()
     for dbkr in dbkrs
         kr, unkComp = asa(KRatio, dbkr), get(dbkr.measured, :Composition, missing)
-        if hasproperties(XPP, kr.unkProps) && hasproperties(ReedFluorescence, kr.unkProps) && #
-            hasproperties(XPP, kr.stdProps) && hasproperties(ReedFluorescence, kr.stdProps) && #
+        if hasminrequired(XPP, kr.unkProps) && hasminrequired(ReedFluorescence, kr.unkProps) && #
+            hasminrequired(XPP, kr.stdProps) && hasminrequired(ReedFluorescence, kr.stdProps) && #
             (!isnothing(unkComp)) && (value(unkComp[kr.element]) > 0.0) && (value(kr.standard[kr.element]) > 0.0)
             # Compute the k-ratio
             kc = gZAFc(kr, unkComp) * (value(unkComp[kr.element]) / value(kr.standard[kr.element]))

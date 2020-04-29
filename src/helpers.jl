@@ -41,7 +41,7 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcom
     function filteredROIs(ref, elm)
         spec, elms = asa(Spectrum, ref.spectrum), ref.elements
         cxrl = charXRayLabels(spec, elm, elms, det, e0)
-        return filter(cxrl, ff, 1.0 / dose(spec))
+        return tophatfilter(cxrl, ff, 1.0 / dose(spec))
     end
 
     for elm in fs.elements
