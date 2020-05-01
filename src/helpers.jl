@@ -51,10 +51,12 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcom
     end
     ress = fit(unks, ff, frs)
     if !isnothing(unkcomp)
-        # Remove previous k-ratios for this DBFitSpectra
-        DBInterface.execute(SQLite.Stmt(db, "DELETE FROM KRATIO WHERE FITSPEC=?;"), (pkey, ))
-        for (unk, res) in zip(unks, ress)
-            write(db, DBKRatio, fs, unk, unkcomp, res)
+        SQLite.transaction(db) do
+            # Remove previous k-ratios for this DBFitSpectra
+            DBInterface.execute(SQLite.Stmt(db, "DELETE FROM KRATIO WHERE FITSPEC=?;"), (pkey, ))
+            for (unk, res) in zip(unks, ress)
+                write(db, DBKRatio, fs, unk, unkcomp, res)
+            end
         end
     end
     return ress
