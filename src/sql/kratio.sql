@@ -1,6 +1,7 @@
 CREATE TABLE KRATIO (
     PKEY INTEGER PRIMARY KEY AUTOINCREMENT,
     FITSPEC INTEGER NOT NULL, -- Key into FITSPECTRA
+    SPECPKEY INTEGER NOT NULL,         -- The spectrum that was fit (or empty for WDS)
     ELEMENT INTEGER NOT NULL, -- Element
     INNER INT NOT NULL,       -- Inner shell of primary line K->1, L1->2, ..., M1->5, ..., N1->10, etc
     OUTER INT NOT NULL,       -- Outer shell of primary line K->1, L1->2, ..., M1->5, ..., N1->10, etc

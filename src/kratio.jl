@@ -3,6 +3,7 @@ using NeXLMatrixCorrection
 struct DBKRatio
     pkey::Int
     fitspectra::Int
+    spectrum::Int
     primary::CharXRay
     lines::Vector{CharXRay}
     mode::String
@@ -31,7 +32,7 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
         Dict(:BeamEnergy => r[:MEASE0], :TakeOffAngle => r[:MEASTOA], :Composition => read(db, Material, r[:MEASURED]))
     ref = Dict(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
     kr = uv(r[:KRATIO], r[:DKRATIO])
-    return DBKRatio(pkey, r[:FITSPEC], primary, lines, r[:MODE], meas, ref, kr)
+    return DBKRatio(pkey, r[:FITSPEC], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, fitspec::Int)::Vector{DBKRatio}
@@ -60,7 +61,7 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
             elm = element(kr.lines[1])
             if any(ismissing.((meascomp[end], mease0[end], meastoa[end], refcomp[end], refe0[end], reftoa[end]))) ||
                (NeXLCore.nonneg(meascomp[end], elm) < 1.0e-6) ||
-               (NeXLCore.nonneg(refcomp[end], elm) < 1.0e-6)
+               (NeXLCore.nonneg(refcomp[end], elm) < 1.0e-6) || (inner(kr.primary)<min(mease0[end],refe0[end]))
                 push!(cks, missing)
                 push!(ratio, missing)
             else
@@ -112,9 +113,9 @@ function Base.write(
 )
     stmt1 = SQLite.Stmt(
         db,
-        "INSERT INTO KRATIO(FITSPEC, ELEMENT, INNER, OUTER, MODE, MEASURED, MEASNAME, MEASE0, MEASTOA, " *
+        "INSERT INTO KRATIO(FITSPEC, SPECPKEY, ELEMENT, INNER, OUTER, MODE, MEASURED, MEASNAME, MEASE0, MEASTOA, " *
         "REFERENCE, REFNAME, REFE0, REFTOA, PRINCIPAL, LINES, KRATIO, DKRATIO) VALUES (" *
-        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     )
     meascompidx = write(db, meascomp)
     for lbl in filter(l -> (l isa CharXRayLabel) && (value(res[l]) > 0.0), labels(res))
@@ -125,6 +126,7 @@ function Base.write(
             stmt1,
             (
                 fitspec.pkey, #
+                meas[:PKEY],
                 z(element(br)),
                 inner(br).subshell.index,
                 outer(br).subshell.index,

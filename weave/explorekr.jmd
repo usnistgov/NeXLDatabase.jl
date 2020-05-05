@@ -31,3 +31,23 @@ plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Zn"), )))
 ```julia; fig_height=5; fig_width=7; fig_ext=".svg";
 plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"S"), )))
 ```
+
+#### Pb L & M
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Pb"), )))
+```
+
+#### Au L & M
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Au"), )))
+```
+
+#### W L & M
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"W"), )))
+```
+
+#### Ba L & M
+```julia; fig_height=5; fig_width=7; fig_ext=".svg";
+plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Ba"), )))
+```

@@ -44,9 +44,9 @@ res=asa(DataFrame, ffrs)
 ```
 
 ##### Statistics
-Summary statistics for the k-ratio data.  (Mean, Standard Deviation, Minimum, 1st quartile, Median, 3rd quartile and Maximum)
+Summary statistics for the k-ratio data.  (Mean, Standard Deviation, Heterogeneity, Minimum, 1st quartile, Median, 3rd quartile and Maximum)
 ```julia; echo=false
-describe(res, :mean, :std, :min, :q25, :median, :q75, :max, cols=names(res)[2:end])
+describe(res)
 ```
 
 ##### Residuals
@@ -60,7 +60,7 @@ end;
 ##### Quantification Results
 Estimate the composition that would produce the measured k-ratios according to the XPP/Reed matrix correction algorithms.
 ```julia; echo=false;
-q=asa(DataFrame, map(ffr->quantify(ffr,[n"C"]), ffrs))
+q=asa(DataFrame, map(ffr->quantify(ffr,strip=[n"C"], mc=CitZAF), ffrs))
 display(q)
 describe(q, :mean, :std, :min, :q25, :median, :q75, :max,cols=names(q)[2:end])
 ```
