@@ -3,14 +3,14 @@ using .Gadfly
 using NeXLMatrixCorrection
 using Colors
 
-function Gadfly.plot(dbkrs::AbstractArray{DBKRatio})
+function Gadfly.plot(dbkrs::AbstractArray{DBKRatio}; mc::Type{<:MatrixCorrection}=XPP, fc::Type{<:FluorescenceCorrection}=ReedFluorescence)
     mfs, kok, dkok, color = String[], Float64[], Float64[], Color[]
     next=1
     matcolors=Dict{String,RGB{Float64}}()
     for dbkr in dbkrs
         kr, unkComp = asa(KRatio, dbkr), get(dbkr.measured, :Composition, missing)
-        if hasminrequired(XPP, kr.unkProps) && hasminrequired(ReedFluorescence, kr.unkProps) && #
-            hasminrequired(XPP, kr.stdProps) && hasminrequired(ReedFluorescence, kr.stdProps) && #
+        if hasminrequired(mc, kr.unkProps) && hasminrequired(fc, kr.unkProps) && #
+            hasminrequired(mc, kr.stdProps) && hasminrequired(fc, kr.stdProps) && #
             (!isnothing(unkComp)) && (value(unkComp[kr.element]) > 0.0) && (value(kr.standard[kr.element]) > 0.0)
             try
                 # Compute the k-ratio
@@ -24,8 +24,8 @@ function Gadfly.plot(dbkrs::AbstractArray{DBKRatio})
                     next+=1
                 end
                 push!(color, matcolors[matname])
-            catch
-                @info "Failed on $dbkr"
+            catch c
+                @info "Failed on $dbkr - $c"
             end
         end
     end

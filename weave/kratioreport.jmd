@@ -5,7 +5,7 @@ using NeXLDatabase
 using DataFrames
 using Gadfly
 
-db, fspkey = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpectra]
+db, fspkey, mode = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpectra], haskey(WEAVE_ARGS, :MC) ? WEAVE_ARGS[:MC] : 'X'
 fs = read(db, DBFitSpectra, fspkey);
 ```
 # K-ratio Report
@@ -46,7 +46,7 @@ res=asa(DataFrame, ffrs)
 ##### Statistics
 Summary statistics for the k-ratio data.  (Mean, Standard Deviation, Heterogeneity, Minimum, 1st quartile, Median, 3rd quartile and Maximum)
 ```julia; echo=false
-describe(res)
+describe(ffrs)
 ```
 
 ##### Residuals
@@ -58,13 +58,18 @@ end;
 ```
 
 ##### Quantification Results
-Estimate the composition that would produce the measured k-ratios according to the XPP/Reed matrix correction algorithms.
+Estimate the composition that would produce the measured k-ratios according to the XPP/Reed or CitZAF matrix correction algorithms.
 ```julia; echo=false;
-q=asa(DataFrame, map(ffr->quantify(ffr,strip=[n"C"], mc=CitZAF), ffrs))
-display(q)
-describe(q, :mean, :std, :min, :q25, :median, :q75, :max,cols=names(q)[2:end])
+alg = mode=='C' ? CitZAF : XPP
+display("Using the $alg matrix correction algorithm")
+qr = map(ffr->quantify(ffr,strip=[n"C"], mc = alg), ffrs)
+display(asa(DataFrame, qr))
+display(describe(qr))
 ```
 
+```julia; fig_height=8; fig_width=8; fig_ext=".svg";
+display(NeXLMatrixCorrection.plot2(qr))
+```
 ##### K-ratios
 This table summarizes the k-ratio data as recorded in the k-ratio database.  It should reflect the information
 above unless a change in the fit algorithm has made it stale. (If no composition has been associated with the
