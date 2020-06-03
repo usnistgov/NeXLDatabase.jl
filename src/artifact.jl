@@ -47,9 +47,9 @@ Base.read(db::SQLite.DB, ::Type{Spectrum}, pkey::Int)::Spectrum =
 
 function NeXLUncertainties.asa(::Type{Spectrum}, artifact::DBArtifact)::Spectrum
     if artifact.format=="EMSA"
-        return readEMSA(IOBuffer(artifact.data), Float64)
+        return loadspectrum(ISOEMSA, IOBuffer(artifact.data), Float64)
     elseif artifact.format=="ASPEX"
-        return readAspexTIFF(IOBuffer(artifact.data); withImgs=false)
+        return loadspectrum(ASPEXTIFF, IOBuffer(artifact.data); withImgs=false)
     else
         error("Unexpected format $(art.format) for a spectrum file.")
     end
