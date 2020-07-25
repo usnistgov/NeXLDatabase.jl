@@ -1,53 +1,26 @@
-# Exploring K-ratios
+# ![NeXL](https://raw.githubusercontent.com/usnistgov/NeXLCore.jl/master/NeXL_sm.png)Database Report
+### Exploring K-ratios
 
-```julia
+```julia; echo=false
 using NeXLDatabase
 using Gadfly
+using Markdown
 
-db=openNeXLDatabase("C:\\Users\\nritchie\\Documents\\Spectra\\k-ratio_database_project_2019\\kratio.db")
+db=openNeXLDatabase("C:\\Users\\nritchie\\Documents\\Spectra\\k-ratio_database_project_2019\\kratio3.db");
 ```
 
-#### Fe K & L
 ```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Fe"), )))
-```
-
-#### Cr K & L
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Cr"), )))
-```
-
-#### Ni K & L
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Ni"), )))
-```
-
-#### Zn K & L
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Zn"), )))
-```
-
-#### S K
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"S"), )))
-```
-
-#### Pb L & M
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Pb"), )))
-```
-
-#### Au L & M
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Au"), )))
-```
-
-#### W L & M
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"W"), )))
-```
-
-#### Ba L & M
-```julia; fig_height=5; fig_width=7; fig_ext=".svg";
-plot(findall(db, DBKRatio, "ELEMENT=?", ( z(n"Ba"), )))
+for elm in elements[4:92]
+	krs = findall(db, DBKRatio, elm=elm)
+	if length(krs)>0
+		try
+			pl = plot(krs)
+			if !isnothing(pl)
+				# display(Markdown.parse("#### Element: $(elm.symbol)"))
+				display(pl)
+			end
+		catch
+		end
+	end
+end
 ```

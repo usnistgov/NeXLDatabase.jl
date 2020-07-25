@@ -50,14 +50,25 @@ function Base.read(db::SQLite.DB, ::Type{DBInstrument}, pkey::Int)::DBInstrument
     return DBInstrument(r[:PKEY], read(db, DBLaboratory, r[:LABKEY]), r[:VENDOR], r[:MODEL], r[:LOCATION])
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory)::Vector{DBInstrument}
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM INSTRUMENT WHERE LABKEY=?;")
-    q = DBInterface.execute(stmt1, (lab.pkey,))
+function Base.findall(db::SQLite.DB, ::Type{DBInstrument}, lab::DBLaboratory; vendor=missing, model=missing)::Vector{DBInstrument}
+    bs = "SELECT * FROM INSTRUMENT WHERE LABKEY=?"
+    args = Any[ lab.pkey ]
+    if !ismissing(vendor)
+        bs *= " AND VENDOR=?"
+        push!(args, vendor)
+    end
+    if !ismissing(model)
+        bs *= " AND MODEL=?"
+        push!(args, model)
+    end
+    stmt1 = SQLite.Stmt(db, bs*";")
+    q = DBInterface.execute(stmt1, args)
     if SQLite.done(q)
-        error("No known instruments for the laboratory '$(lab)'.")
+        error("No known instruments for $args.")
     end
     return [ DBInstrument(r[:PKEY], lab, r[:VENDOR], r[:MODEL], r[:LOCATION]) for r in q ]
 end
+
 
 
 #CREATE TABLE DETECTOR (
@@ -183,9 +194,19 @@ Base.convert(::Type{BasicEDS}, dbd::DBDetector, chCount::Int = 4096) = BasicEDS(
     ),
 )
 
-function Base.findall(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument)::Vector{DBDetector}
-    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM DETECTOR WHERE INSTRUMENT=?;")
-    q = DBInterface.execute(stmt1, (inst.pkey,))
+function Base.findall(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument; vendor=missing, model=missing)::Vector{DBDetector}
+    bs="SELECT PKEY FROM DETECTOR WHERE INSTRUMENT=?"
+    args = Any[inst.pkey]
+    if !ismissing(vendor)
+        bs *= " AND VENDOR=?"
+        push!(args,vendor)
+    end
+    if !ismissing(model)
+        bs *= " AND MODEL=?"
+        push!(args, model)
+    end
+    stmt1 = SQLite.Stmt(db, bs*";")
+    q = DBInterface.execute(stmt1, args)
     return [ read(db, DBDetector, r[:PKEY]) for r in q ]
 end
 

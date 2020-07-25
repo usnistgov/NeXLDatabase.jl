@@ -35,9 +35,23 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, pkey::Int)::DBProject
     return DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject)::Vector{DBProject}
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM PROJECT WHERE PARENT=?;")
-    q = DBInterface.execute(stmt1, ( parent.pkey, ))
+function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject; createdBy=missing, name=missing, desc=missing)::Vector{DBProject}
+    bs = "SELECT * FROM PROJECT WHERE PARENT=?"
+    args = Any[ parent.pkey ]
+    if !ismissing(createdBy)
+        bs *= "AND CREATEDBY=?"
+        push!(args, createdBy)
+    end
+    if !ismissing(name)
+        bs *= "AND NAME=?"
+        push!(args, name)
+    end
+    if !ismissing(desc)
+        bs *= "AND DESCRIPTION=?"
+        push!(args, desc)
+    end
+    stmt1 = SQLite.Stmt(db, bs*";")
+    q = DBInterface.execute(stmt1, args)
     return [ DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION]) for r in q]
 end
 

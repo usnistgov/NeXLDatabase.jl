@@ -35,9 +35,19 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     return DBKRatio(pkey, r[:FITSPEC], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, fitspec::Int)::Vector{DBKRatio}
-    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE FITSPEC=?;")
-    return [read(db, DBKRatio, r[:PKEY]) for r in DBInterface.execute(stmt, (fitspec,))]
+function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec=nothing, elm=nothing)::Vector{DBKRatio}
+    bs, args = "", []
+    if !isnothing(fitspec)
+        bs = "FITSPEC=?"
+        push!(args,fitspec)
+    end
+    if !isnothing(elm)
+        bs = bs*(length(bs)>0 ? " AND " : "")*"ELEMENT=?"
+        push!(args,z(elm))
+    end
+    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE "*bs*";")
+    q = DBInterface.execute(stmt, args)
+    return SQLite.done(q) ? [] : [read(db, DBKRatio, r[:PKEY]) for r in q]
 end
 
 function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio}; withComputedKs::Bool = false)
@@ -97,11 +107,6 @@ end
 
 NeXLUncertainties.asa(::Type{KRatio}, dbkr::DBKRatio)::KRatio =
     KRatio(dbkr.lines, dbkr.measured, dbkr.reference, dbkr.reference[:Composition], dbkr.kratio)
-
-function Base.findall(db::SQLite.DB, ::Type{DBKRatio}, filter::String, args::Tuple)::Vector{DBKRatio}
-    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE " * filter * ";")
-    return [read(db, DBKRatio, r[:PKEY]) for r in DBInterface.execute(stmt, args)]
-end
 
 function Base.write(
     db::SQLite.DB,

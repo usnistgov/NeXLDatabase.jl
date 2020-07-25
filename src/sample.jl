@@ -18,6 +18,26 @@ function Base.write(db::SQLite.DB, ::Type{DBSample}, parentkey::Int, ownerkey::I
     return  DBInterface.lastrowid(results)
 end
 
+function Base.findall(db::SQLite.DB, ::Type{DBSample}, owner::DBLaboratory; parent=missing, name=missing, desc=missing)
+    bs = "SELECT PKEY FROM SAMPLE WHERE OWNER=?"
+    args = Any[ owner.pkey ]
+    if !ismissing(parent)
+        bs *= " AND PARENT=?"
+        push!(args, parent)
+    end
+    if !ismissing(name)
+        bs *= " AND NAME=?"
+        push!(args, name)
+    end
+    if !ismissing(desc)
+        bs *= " AND DESCRIPTION=?"
+        push!(args, desc)
+    end
+    stmt = SQLite.Stmt(db,bs*";")
+    q = DBInterface.execute(stmt, args)
+    return [ read(db, DBSample, r[:PKEY]) for r in q ]
+end
+
 function find(db::SQLite.DB, ::Type{DBSample}, owner::Int)::Vector{DBSample}
     stmt = SQLite.Stmt(db,"SELECT PKEY FROM SAMPLE WHERE OWNER=?;")
     q = DBInterface.execute(stmt, (owner,))

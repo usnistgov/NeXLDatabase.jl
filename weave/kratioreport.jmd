@@ -4,25 +4,42 @@ using NeXLMatrixCorrection
 using NeXLDatabase
 using DataFrames
 using Gadfly
+using Weave
+
+# Customized output for DataFrame
+function Base.display(report::Weave.Report, m::MIME"text/html", data::DataFrame)
+	function wrap(ss)
+		fig_w, fig_h = get(report.cur_chunk.options, :tab_width, 8), get(report.cur_chunk.options, :tab_height, 6)
+		return "<div style=\"width:$(fig_w)in;height:$(fig_h)in;line-height:2em;overflow:auto;padding:0.1in;\">"*ss*"</div>"
+	end
+	io = IOBuffer()
+  show(IOContext(io, :limit => false), m, data, summary=false, eltypes=false)
+	report.rich_output *= string('\n', wrap(String(take!(io))))
+end
+
+Base.display(report::Weave.Report, m::MIME"text/html", data::HTML) =
+	report.rich_output *= string('\n', data.content)
+
 
 db, fspkey, mode = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpectra], haskey(WEAVE_ARGS, :MC) ? WEAVE_ARGS[:MC] : 'X'
 fs = read(db, DBFitSpectra, fspkey);
+nothing
 ```
 # K-ratio Report
-Version 1.0
+Version 1.1
 
 This report summarizes the measured k-ratios from a single measurement campaign.  A measurement campaign is multiple
 measurements of a single material and the associated reference spectra.
 
 ##### Project
 Details about who collected what, where and using what instrumentation.
-```julia; echo=false
+```julia; echo=false; tab_height=8;
 asa(DataFrame, fs)
 ```
 
 ##### Measured Spectra
 The spectra from which x-ray intensity data will be extracted using the reference spectra.
-```julia; echo=false
+```julia; echo=false; tab_height=6;
 asa(DataFrame, fs.fitspectrum)
 ```
 
@@ -31,21 +48,21 @@ The spectra against which the measured spectra will be compared.  The reference 
 (unobstructed by other element's characteristic lines) of the characteristic x-ray lines for which it is a
 reference.
   )
-```julia; echo=false
+```julia; echo=false; fig_ext=".svg"; tab_width=10; tab_height=4;
 asa(DataFrame, fs.refspectrum)
 ```
 
 ##### K-ratio Results
 The k-ratio is the ratio of the intensity in the measured to the intensity in the reference for a specific set of
 characteristic x-ray lines.
-```julia; echo=false
+```julia; echo=false; fig_ext=".svg"; tab_width=10; tab_height=6;
 ffrs = NeXLSpectrum.fit(db, DBFitSpectra, fspkey)
 res=asa(DataFrame, ffrs)
 ```
 
 ##### Statistics
 Summary statistics for the k-ratio data.  (Mean, Standard Deviation, Heterogeneity, Minimum, 1st quartile, Median, 3rd quartile and Maximum)
-```julia; echo=false
+```julia; echo=false; fig_ext=".svg"; tab_width=10; tab_height=4;
 describe(ffrs)
 ```
 
@@ -57,17 +74,24 @@ for ffr in ffrs
 end;
 ```
 
-##### Quantification Results
-Estimate the composition that would produce the measured k-ratios according to the XPP/Reed or CitZAF matrix correction algorithms.
 ```julia; echo=false;
 alg = mode=='C' ? CitZAF : XPP
-display("Using the $alg matrix correction algorithm")
-qr = map(ffr->quantify(ffr,strip=[n"C"], mc = alg), ffrs)
+display(HTML("<h5>Quantify using $alg</h5>"))
+display(HTML("<p>Estimate the composition that would produce the measured k-ratios according to the $alg/Reed matrix correction algorithms.</p>"))
+```
+
+```julia; echo=false;
+qr = map(ffr->quantify(ffr,strip=[n"C"], mc = alg), ffrs);
+nothing
+```
+```julia; echo=false; fig_ext=".svg"; fig_width=10; fig_height=6;
 display(asa(DataFrame, qr))
+```
+```julia; echo=false; fig_ext=".svg"; fig_width=10; fig_height=4;
 display(describe(qr))
 ```
 
-```julia; fig_height=8; fig_width=8; fig_ext=".svg";
+```julia; fig_height=8; fig_width=8; fig_ext=".svg"; echo=false;
 display(NeXLMatrixCorrection.plot2(qr))
 ```
 ##### K-ratios
@@ -75,8 +99,8 @@ This table summarizes the k-ratio data as recorded in the k-ratio database.  It 
 above unless a change in the fit algorithm has made it stale. (If no composition has been associated with the
 measured spectrum this table will be empty.)
 
-```julia; echo=false
-krs = findall(db, DBKRatio, fspkey)
+```julia; echo=false; tab_width=11; tab_height=10;
+krs = findall(db, DBKRatio, fitspec=fspkey)
 if length(krs)>0
   try
     asa(DataFrame, krs, withComputedKs=true)
