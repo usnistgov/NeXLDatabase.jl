@@ -4,6 +4,8 @@ CREATE TABLE FITSPECTRA (
    PROJECT INTEGER NOT NULL,
    DETECTOR INTEGER NOT NULL,
    ELEMENTS TEXT NOT NULL, -- The elements to fit (see below for format)
+   MATKEY INTEGER, -- Helpful to reference a MATERIAL when the composition is known
+   DISPOSITION TEXT, -- "OK" or "Reason not to include"
    FOREIGN KEY(DETECTOR) REFERENCES DETECTOR(PKEY),
    FOREIGN KEY(PROJECT) REFERENCES PROJECT(PKEY)
 );

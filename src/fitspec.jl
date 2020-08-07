@@ -69,6 +69,8 @@ struct DBFitSpectra
     project::DBProject
     detector::DBDetector
     elements::Vector{Element}
+    material::Union{Missing, Material}
+    disposition::String
     fitspectrum::Vector{DBFitSpectrum}
     refspectrum::Vector{DBReference}
 end
@@ -79,15 +81,21 @@ function NeXLUncertainties.asa(::Type{DataFrame}, dbfs::DBFitSpectra)
     push!(prop, "Project"), push!(values, repr(dbfs.project))
     push!(prop, "Analyst"), push!(values, dbfs.project.createdBy.name)
     push!(prop, "Elements"), push!(values, "$(_elmstostr(dbfs.elements))")
+    push!(prop, "Material"), push!(values, repr(dbfs.material))
+    push!(prop, "Disposition"), push!(values, dbfs.disposition)
     res = DataFrame(Property=prop, Value=values)
     return vcat(res, asa(DataFrame, dbfs.detector))
 end
 
 function Base.show(io::IO, dbfs::DBFitSpectra)
-    println(io, "   Index = $(dbfs.pkey)")
-    println(io, " Project = $(repr(dbfs.project))")
-    println(io, "Elements = $(_elmstostr(dbfs.elements))")
-    println(io, "Detector = $(repr(dbfs.detector))")
+    println(io, "      Index = $(dbfs.pkey)")
+    println(io, "    Project = $(repr(dbfs.project))")
+    println(io, "   Elements = $(_elmstostr(dbfs.elements))")
+    println(io, "   Detector = $(repr(dbfs.detector))")
+    if !ismissing(dbfs.material)
+        println(io, "   Material = $(repr(dbfs.material))")
+    end
+    println(io, "Disposition = $(dbfs.disposition)")
     print(io, "==== Unknowns ====")
     for dbf in dbfs.fitspectrum
         print(io, "\n\t$dbf")
@@ -125,9 +133,9 @@ PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
 _elmstostr(elms::Vector{Element}) = join(symbol.(elms), ',')
 _strtoelms(str::String) = parse.(Element, strip.(split(str, ',')))
 
-function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element})::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, ELEMENTS) VALUES( ?, ?, ?);")
-    q = DBInterface.execute(stmt1, (projKey, detKey, _elmstostr(elms)))
+function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element}, matkey::Integer, disposition::String="Pending")::Int
+    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, DISPOSITION, ELEMENTS, MATERIAL ) VALUES( ?, ?, ?, ?, ?);")
+    q = DBInterface.execute(stmt1, (projKey, detKey, disposition, _elmstostr(elms), matkey))
     return DBInterface.lastrowid(q)
 end
 
@@ -142,6 +150,8 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
     project = read(db, DBProject, r1[:PROJECT])
     detector = read(db, DBDetector, r1[:DETECTOR])
     elms = _strtoelms(r1[:ELEMENTS])
+    material = r1[:MATKEY] != -1 ? read(db, r1[:MATKEY]) : missing
+    disposition = r1[:DISPOSITION]
     stmt2 = SQLite.Stmt(db, "SELECT * FROM FITSPECTRUM WHERE FITSPECTRA=?;")
     q2 = DBInterface.execute(stmt2, (pkey,))
     tobefit = DBFitSpectrum[]
@@ -158,7 +168,40 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
         spec = read(db, DBSpectrum, r3[:SPECTRUM])
         push!(refs, DBReference(r3[:PKEY], r3[:FITSPECTRA], spec, _strtoelms(r3[:ELEMENTS])))
     end
-    return DBFitSpectra(pkey, project, detector, elms, tobefit, refs)
+    return DBFitSpectra(pkey, project, detector, elms, material, disposition, tobefit, refs)
+end
+
+"""
+    disposition(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
+
+Reports the disposition of this set of fitted spectra.
+
+  * `"Pending"` - Entered in the database but not reviewed
+  * `"Rejected: "*msg` - Rejected for the reason specified in `msg`
+  * `"Accepted: "*msg` - Reviewed and accepted with optional `msg`
+"""
+function disposition(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
+    stmt1 = SQLite.Stmt(db, "SELECT DISPOSITION FROM FITSPECTRA WHERE PKEY=?;")
+    q1 = DBInterface.execute(stmt1, (pkey,))
+    if SQLite.done(q1)
+        error("No fit spectra record with pkey = $pkey.")
+    end
+    return SQLite.Row(q1)[:DISPOSITION]
+end
+
+"""
+    disposition!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, value::String)
+
+Sets the disposition of this set of fitted spectra.
+
+  * `"Pending"` - Entered in the database but not reviewed
+  * `"Rejected: "*msg` - Rejected for the reason specified in `msg`
+  * `"Accepted: "*msg` - Reviewed and accepted with optional `msg`
+"""
+function disposition!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, value::String)
+    stmt1 = SQLite.Stmt(db, "UPDATE FITSPECTRA SET DISPOSITION = ? WHERE PKEY=?;")
+    DBInterface.execute(stmt1, (pkey, value))
+    return value
 end
 
 function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
@@ -170,4 +213,23 @@ function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
     DBInterface.execute(stmt3, (pkey,))
     DBInterface.execute(stmt2, (pkey,))
     DBInterface.execute(stmt1, (pkey,))
+end
+
+function NeXLUncertainties.asa(::Type{DataFrame}, db::SQLite.DB, ::Type{DBFitSpectra})
+    stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM FITSPECTRA")
+    q1 = DBInterface.execute(stmt1)
+    return SQLite.done(q1) ? DataFrame() : asa(DataFrame, [ read(db, DBFitSpectra, row[:PKEY]) for row in res ])
+end
+
+function NeXLUncertainties.asa(::Type{DataFrame}, dbfss::AbstractArray{DBFitSpectra})
+    pkey, proj, analyst, els, disp, mats = Int[], String[], String[], String[], String[], String[]
+    for dbfs in dbfss
+        push!(pkey, dbfs.pkey)
+        push!(project, repr(dbfs.project))
+        push!(analyst, dbfs.project.createdBy.name)
+        push!(els, _elmstostr(dbfs.elements))
+        push!(mats, ismissing(dbfs.material) ? "?" : name(dbfs.material))
+        push!(disp, dbfs.disposition)
+    end
+    return DataFrame(PKey=pkey, Project=project, Analyst=analyst, Elements=els, Material=mats, Disposition=disp)
 end

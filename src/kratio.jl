@@ -71,11 +71,11 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
             elm = element(kr.lines[1])
             if any(ismissing.((meascomp[end], mease0[end], meastoa[end], refcomp[end], refe0[end], reftoa[end]))) ||
                (NeXLCore.nonneg(meascomp[end], elm) < 1.0e-6) ||
-               (NeXLCore.nonneg(refcomp[end], elm) < 1.0e-6) || (inner(kr.primary)<min(mease0[end],refe0[end]))
+               (NeXLCore.nonneg(refcomp[end], elm) < 1.0e-6) || (energy(inner(kr.primary))>0.95*min(mease0[end],refe0[end]))
                 push!(cks, missing)
                 push!(ratio, missing)
             else
-                br = [kr.primary]
+                br = [ kr.primary ]
                 zs = zafcorrection(XPP, ReedFluorescence, Coating, meascomp[end], br, mease0[end])
                 zr = zafcorrection(XPP, ReedFluorescence, Coating, refcomp[end], br, refe0[end])
                 k =
@@ -99,8 +99,8 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
         ΔK = dkrv,
     )
     if withComputedKs
-        insertcols!(res, ncol(res) + 1, :Kxpp => cks)
-        insertcols!(res, ncol(res) + 1, :Ratio => ratio)
+        res[:, :Kxpp] = cks
+        res[:, :Ratio] = ratio
     end
     return res
 end
