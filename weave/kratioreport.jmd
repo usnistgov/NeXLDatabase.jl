@@ -25,8 +25,9 @@ db, fspkey, mode = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpect
 fs = read(db, DBFitSpectra, fspkey);
 nothing
 ```
+![NeXL](NeXL_sm.png)
 # K-ratio Report
-Version 1.1
+Version 1.2
 
 This report summarizes the measured k-ratios from a single measurement campaign.  A measurement campaign is multiple
 measurements of a single material and the associated reference spectra.
@@ -99,12 +100,12 @@ This table summarizes the k-ratio data as recorded in the k-ratio database.  It 
 above unless a change in the fit algorithm has made it stale. (If no composition has been associated with the
 measured spectrum this table will be empty.)
 
-```julia; echo=false; tab_width=11; tab_height=10;
+```julia; echo=false; tab_width=13; tab_height=10;
 krs = findall(db, DBKRatio, fitspec=fspkey)
 if length(krs)>0
   try
     asa(DataFrame, krs, withComputedKs=true)
-  catch
+  catch ex
     asa(DataFrame, krs, withComputedKs=false)
   end
 else

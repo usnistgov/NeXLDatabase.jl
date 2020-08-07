@@ -33,7 +33,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "sample", "project", #
         "instrument", "detector", #
         "artifact", "spectrum", "fitspectra", #
-        "kratio" #
+        "kratio", "standardfor" #
     )
     for tbl in tables
         if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
@@ -55,6 +55,7 @@ include("spectrum.jl")
 include("fitspec.jl")
 include("kratio.jl")
 include("helpers.jl")
+include("standardfor.jl")
 
 export DBPerson
 export DBLaboratory
@@ -71,6 +72,7 @@ export DBFitSpectra
 export DBFitSpectrum
 export DBReference
 export DBKRatio
+export DBStandardFor
 
 export measured, references, dbreferences
 export constructFitSpectra
