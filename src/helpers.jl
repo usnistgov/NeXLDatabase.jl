@@ -13,7 +13,7 @@ function constructFitSpectra(
 )::Int
     SQLite.transaction(db) do # All or nothing...
         elms = ismissing(unkComp) ? extraElms : append!(collect(keys(unkComp)), extraElms)
-        matkey = ismissing(unkcomp) ? -1 : write(db, Material)
+        matkey = ismissing(unkComp) ? -1 : write(db, unkComp)
         fitspectra = write(db, DBFitSpectra, project.pkey, detector.pkey, elms, matkey)
         dt = now()
         for fn in measSpectra

@@ -134,7 +134,7 @@ _elmstostr(elms::Vector{Element}) = join(symbol.(elms), ',')
 _strtoelms(str::String) = parse.(Element, strip.(split(str, ',')))
 
 function Base.write(db::SQLite.DB, ::Type{DBFitSpectra}, projKey::Int, detKey::Int, elms::Vector{Element}, matkey::Integer, disposition::String="Pending")::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, DISPOSITION, ELEMENTS, MATERIAL ) VALUES( ?, ?, ?, ?, ?);")
+    stmt1 = SQLite.Stmt(db, "INSERT INTO FITSPECTRA(PROJECT, DETECTOR, DISPOSITION, ELEMENTS, MATKEY ) VALUES( ?, ?, ?, ?, ?);")
     q = DBInterface.execute(stmt1, (projKey, detKey, disposition, _elmstostr(elms), matkey))
     return DBInterface.lastrowid(q)
 end
@@ -150,7 +150,7 @@ function Base.read(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)::DBFitSpectra
     project = read(db, DBProject, r1[:PROJECT])
     detector = read(db, DBDetector, r1[:DETECTOR])
     elms = _strtoelms(r1[:ELEMENTS])
-    material = r1[:MATKEY] != -1 ? read(db, r1[:MATKEY]) : missing
+    material = r1[:MATKEY] != -1 ? read(db, Material, r1[:MATKEY]) : missing
     disposition = r1[:DISPOSITION]
     stmt2 = SQLite.Stmt(db, "SELECT * FROM FITSPECTRUM WHERE FITSPECTRA=?;")
     q2 = DBInterface.execute(stmt2, (pkey,))
