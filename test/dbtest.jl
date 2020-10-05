@@ -49,7 +49,7 @@ end
     det3 = convert(BasicEDS, read(db, DBDetector, d3), 4096)
     @test isapprox(resolution(energy(n"Mn K-L3"), det3), 128.0, atol = 0.001)
     @test energy(1, det3) == 0.0
-    @test length(NeXLSpectrum.visible(characteristic(n"Ca", ltransitions), det3)) == 0
+    @test length(NeXLSpectrum.isvisible(characteristic(n"Ca", ltransitions), det3)) == 0
     @test read(db,DBPerson,"dale.newbury@nist.gov").name == "Dale Newbury"
 
     k240 = read(db, Material, "K240")
