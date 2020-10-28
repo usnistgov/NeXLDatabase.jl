@@ -222,14 +222,14 @@ function NeXLUncertainties.asa(::Type{DataFrame}, db::SQLite.DB, ::Type{DBFitSpe
 end
 
 function NeXLUncertainties.asa(::Type{DataFrame}, dbfss::AbstractArray{DBFitSpectra})
-    pkey, proj, analyst, els, disp, mats = Int[], String[], String[], String[], String[], String[]
-    for dbfs in dbfss
-        push!(pkey, dbfs.pkey)
-        push!(project, repr(dbfs.project))
-        push!(analyst, dbfs.project.createdBy.name)
-        push!(els, _elmstostr(dbfs.elements))
-        push!(mats, ismissing(dbfs.material) ? "?" : name(dbfs.material))
-        push!(disp, dbfs.disposition)
-    end
-    return DataFrame(PKey=pkey, Project=project, Analyst=analyst, Elements=els, Material=mats, Disposition=disp)
+    pkeys = unique(dbfs.pkey for dbfs in dbfss)
+    dedup = [ dbfss[findfirst(dbfs->dbfs.pkey==pk, dbfss)] for pk in pkeys ]
+    return DataFrame(
+        PKey=[ dbfs.pkey for dbfs in dedup ], 
+        Project=[ dbfs.project.name for dbfs in dedup ], 
+        Analyst=[ dbfs.project.createdBy.name for dbfs in dedup ], 
+        Elements=[ _elmstostr(dbfs.elements) for dbfs in dedup ], 
+        Material=[ dbfs.material for dbfs in dedup ], 
+        Disposition= [ dbfs.disposition for dbfs in dedup ]
+    )
 end

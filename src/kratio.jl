@@ -13,13 +13,13 @@ struct DBKRatio
 end
 
 function Base.show(io::IO, kr::DBKRatio)
-    print(
-        io,
-        "K[($(name(kr.measured[:Composition])) @ $(kr.measured[:BeamEnergy]) eV)/" *
-        "($(name(kr.reference[:Composition])) @ $(kr.reference[:BeamEnergy]) eV)," *
-        "$(kr.lines)] = $(kr.kratio)",
-    )
+    print( io, "$(krname(kr)): $(kr.lines)] = $(kr.kratio)")
 end
+
+function krname(kr::DBKRatio)
+    return "K[($(name(kr.measured[:Composition])) @ $(0.001*kr.measured[:BeamEnergy]) keV)/($(name(kr.reference[:Composition])) @ $(0.001*kr.reference[:BeamEnergy]) keV)"
+end
+
 
 function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     stmt = SQLite.Stmt(db, "SELECT * FROM KRATIO WHERE PKEY=?;")
@@ -35,17 +35,17 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     return DBKRatio(pkey, r[:FITSPEC], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec=nothing, elm=nothing)::Vector{DBKRatio}
-    bs, args = "", []
+function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
+    bs, args = "KRATIO >= ?", [ mink, ]
     if !isnothing(fitspec)
-        bs = "FITSPEC=?"
+        bs *= " AND FITSPEC = ?"
         push!(args,fitspec)
     end
     if !isnothing(elm)
-        bs = bs*(length(bs)>0 ? " AND " : "")*"ELEMENT=?"
+        bs *= " AND ELEMENT=?"
         push!(args,z(elm))
     end
-    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE "*bs*";")
+    stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE $bs;")
     q = DBInterface.execute(stmt, args)
     return SQLite.done(q) ? [] : [read(db, DBKRatio, r[:PKEY]) for r in q]
 end

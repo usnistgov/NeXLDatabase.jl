@@ -27,7 +27,7 @@ function Gadfly.plot(
                 push!(mfs, name(shell(brightest(kr.lines)))) # value(unkComp[kr.element]))
                 push!(kok, value(kr.kratio) / kc)
                 push!(dkok, σ(kr.kratio) / kc)
-                matname = "$(kr.element) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV"
+                matname = "$(symbol(kr.element)) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV"
                 if !haskey(matcolors, matname)
                     matcolors[matname] = palette[next+=1]
                 end
@@ -48,7 +48,7 @@ function Gadfly.plot(
             Stat.x_jitter(range = 0.8),
             Guide.manual_color_key("Material", collect(keys(matcolors)), collect(values(matcolors))), # Guide.yrug,
             Guide.xlabel("Shell"),
-            Guide.ylabel("k[Measured]/k[Calculated]"),
+            Guide.ylabel("k[Measured]/k[$(repr(nameof(mc))[2:end])]"),
             Scale.x_discrete(levels = ["K", "L", "M"]),
             Coord.cartesian(xmin = 1, xmax = 3),
         )
