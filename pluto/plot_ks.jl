@@ -55,18 +55,13 @@ end
 # ╔═╡ cb991c00-1888-11eb-02fb-b33a153473dc
 asa(DataFrame, [ read(db, DBFitSpectra, kr.fitspectra) for kr in krs])
 
-# ╔═╡ 14a54ee0-188f-11eb-0fe8-91eceb0e2526
-function NeXLUncertainties.asa(::Type{DataFrame}, dbfss::AbstractArray{DBFitSpectra})
-    pkeys = unique(dbfs.pkey for dbfs in dbfss)
-    dedup = [ dbfss[findfirst(dbfs->dbfs.pkey==pk, dbfss)] for pk in pkeys ]
-    return DataFrame(
-        PKey=[ dbfs.pkey for dbfs in dedup ], 
-        Project=[ dbfs.project.name for dbfs in dedup ], 
-        Analyst=[ dbfs.project.createdBy.name for dbfs in dedup ], 
-        Elements=[ NeXLDatabase._elmstostr(dbfs.elements) for dbfs in dedup ], 
-        Material=[ dbfs.material for dbfs in dedup ], 
-        Disposition= [ dbfs.disposition for dbfs in dedup ]
-    )
+# ╔═╡ 6185fa20-19d9-11eb-04d3-3132221ca798
+begin
+	if length(krs)>0
+		plot(krs, style=:XY)
+	else
+		md"No k-ratios have been selected"
+	end
 end
 
 # ╔═╡ Cell order:
@@ -79,4 +74,4 @@ end
 # ╟─22f61d10-185a-11eb-2c53-85f7ef0fb78a
 # ╟─2a8bd5f0-185b-11eb-0b96-8592774730a0
 # ╟─cb991c00-1888-11eb-02fb-b33a153473dc
-# ╟─14a54ee0-188f-11eb-0fe8-91eceb0e2526
+# ╟─6185fa20-19d9-11eb-04d3-3132221ca798

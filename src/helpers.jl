@@ -35,27 +35,22 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcom
     fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
     unks = measured(fs)
     det = convert(BasicEDS, fs.detector)
-    ff = buildfilter(det)
-    e0 = NeXLSpectrum.sameproperty(unks, :BeamEnergy)
-    frs = FilteredReference[]
-
-    function filteredROIs(ref, elm)
-        spec, elms = asa(Spectrum, ref.spectrum), ref.elements
-        cxrl = charXRayLabels(spec, elm, elms, det, e0)
-        return tophatfilter(cxrl, ff, 1.0 / dose(spec))
-    end
-
+    refs =  NeXLSpectrum.ReferencePacket[]
+    specs = [ asa(Spectrum, ref.spectrum) for ref in fs.refspectrum ]
     for elm in fs.elements
-        for ref in filter(ref->elm in ref.elements, fs.refspectrum)
-            append!(frs, filteredROIs(ref, elm))
-        end
-    end
-    ress = fit(unks, ff, frs)
+        # Make sure that the candidate reference material has some of this element
+        for spec in filter(sp->haskey(sp,:Composition) && (value(sp[:Composition][elm]) > 0.01) , specs)
+			push!(refs, reference(elm, spec))
+		end
+	end
+	ffp = NeXLSpectrum.references(refs, det)
+    ress = map(sp->fit(sp, ffp), unks)
     if !isnothing(unkcomp)
         SQLite.transaction(db) do
             # Remove previous k-ratios for this DBFitSpectra
             DBInterface.execute(SQLite.Stmt(db, "DELETE FROM KRATIO WHERE FITSPEC=?;"), (pkey, ))
             for (unk, res) in zip(unks, ress)
+                @show pkey, res
                 write(db, DBKRatio, fs, unk, unkcomp, res)
             end
         end

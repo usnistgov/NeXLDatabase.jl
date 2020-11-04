@@ -124,6 +124,7 @@ function Base.write(
     )
     meascompidx = write(db, meascomp)
     for lbl in filter(l -> (l isa CharXRayLabel) && (value(res[l]) > 0.0), labels(res))
+        @show lbl, value(res[lbl])
         ref, br = spectrum(lbl), brightest(lbl.xrays)
         refcomp = ref[:Composition]
         refcompidx = write(db, refcomp)

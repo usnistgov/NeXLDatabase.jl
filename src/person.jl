@@ -8,6 +8,14 @@ end
 
 Base.show(io::IO, per::DBPerson) = print(io, per.name)
 
+function NeXLUncertainties.asa(::Type{DataFrame}, people::AbstractArray{DBPerson})
+    return DataFrame(
+        PKey = [ person.pkey for person in people ],
+        Name = [ person.name for person in people ],
+        EMail = [ person.email for person in people ]
+    )
+end
+
 function Base.write(db::SQLite.DB, ::Type{DBPerson}, name::String, email::String)::Int
     (find(db, DBPerson, email) == -1) || error("A person with e-mail address $email already exists.")
     stmt1 = SQLite.Stmt(db, "INSERT INTO PERSON ( NAME, EMAIL ) VALUES ( ?, ? );")

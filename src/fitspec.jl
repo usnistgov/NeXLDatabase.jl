@@ -118,7 +118,7 @@ measured(fbfs::DBFitSpectra)::Vector{Spectrum} = map(fs -> asa(Spectrum, fs), fb
 
 Return a vector of the spectra which could be used as references for the Element.
 """
-references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} = convert.(Spectrum, dbreferences(fbfs, elm))
+NeXLSpectrum.references(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} = map(ref->asa(Spectrum,ref), dbreferences(fbfs, elm))
 
 """
     dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference}
@@ -220,6 +220,25 @@ function NeXLUncertainties.asa(::Type{DataFrame}, db::SQLite.DB, ::Type{DBFitSpe
     q1 = DBInterface.execute(stmt1)
     return SQLite.done(q1) ? DataFrame() : asa(DataFrame, [ read(db, DBFitSpectra, row[:PKEY]) for row in res ])
 end
+
+function Base.findall(db::SQLite.DB, ::Type{DBFitSpectra}; project::Union{DBProject,Missing} = missing, det::Union{DBDetector,Missing}=missing)::Vector{DBFitSpectra}
+    keys, args = String[], Any[]
+    if !ismissing(project)
+        push!(keys,"PROJECT=?")
+        push!(args, project.pkey)
+    end
+    if !ismissing(det)
+        push!(keys, "DETECTOR=?")
+        push!(args, det.pkey)
+    end
+    if length(keys)==0
+        @error "Please specify either a project or a detector."
+    end
+    stmt=SQLite.Stmt(db, "SELECT PKEY FROM FITSPECTRA WHERE $(join(keys," AND "));")
+    q1 = DBInterface.execute(stmt, args)
+    return [ read(db, DBFitSpectra, r[:PKEY] ) for r in q1 ]
+end
+
 
 function NeXLUncertainties.asa(::Type{DataFrame}, dbfss::AbstractArray{DBFitSpectra})
     pkeys = unique(dbfs.pkey for dbfs in dbfss)
