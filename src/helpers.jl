@@ -8,9 +8,9 @@ function constructFitSpectra(
     analyst::DBPerson, # The person who collected the data
     e0::Float64, # The beam energy for the unknown in eV
     measSpectra::Vector{String}, # The files containing the measured spectra
-    refSpectra::Vector{Tuple{DBSample, Material, String, Float64, Vector{Element}}}, # The reference spectra (sample, material, filename, e0, extra elements)
+    refSpectra::Vector{Tuple{DBSample, Material{T,U}, String, Float64, Vector{Element}}}, # The reference spectra (sample, material, filename, e0, extra elements)
     extraElms::AbstractVector{Element} = Element[], #
-)::Int
+)::Int where { T<:AbstractFloat, U<:AbstractFloat}
     SQLite.transaction(db) do # All or nothing...
         elms = ismissing(unkComp) ? extraElms : append!(collect(keys(unkComp)), extraElms)
         matkey = ismissing(unkComp) ? -1 : write(db, unkComp)
@@ -31,7 +31,7 @@ function constructFitSpectra(
     end
 end
 
-function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcomp::Union{Material, Nothing}=nothing)::Vector{FilterFitResult}
+function NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcomp::Union{Material, Nothing}=nothing)::Vector{FilterFitResult}
     fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
     unks = measured(fs)
     det = convert(BasicEDS, fs.detector)
@@ -44,13 +44,13 @@ function NeXLSpectrum.fit(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcom
 		end
 	end
 	ffp = NeXLSpectrum.references(refs, det)
-    ress = map(sp->fit(sp, ffp), unks)
+    ress = map(sp->fit_spectrum(sp, ffp), unks)
     if !isnothing(unkcomp)
         SQLite.transaction(db) do
             # Remove previous k-ratios for this DBFitSpectra
             DBInterface.execute(SQLite.Stmt(db, "DELETE FROM KRATIO WHERE FITSPEC=?;"), (pkey, ))
             for (unk, res) in zip(unks, ress)
-                @show pkey, res
+                # @show pkey, res
                 write(db, DBKRatio, fs, unk, unkcomp, res)
             end
         end

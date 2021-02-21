@@ -128,7 +128,7 @@ Return a vector of the spectra which could be used as references for the Element
 dbreferences(fbfs::DBFitSpectra, elm::Element)::Vector{DBReference} =
     collect(filter(rs -> elm in rs.elements, fbfs.refspectrum))
 
-PeriodicTable.elements(fbfs::DBFitSpectra) = fbfs.elements
+NeXLCore.elms(fbfs::DBFitSpectra) = fbfs.elements
 
 _elmstostr(elms::Vector{Element}) = join(symbol.(elms), ',')
 _strtoelms(str::String) = parse.(Element, strip.(split(str, ',')))

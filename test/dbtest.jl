@@ -224,7 +224,7 @@ end
         ( hiTC, parse(Material,"CaF2"), joinpath(path,"CaF2 std.msa"), e0, [ n"Ca", n"F", n"C" ])
         ], [ n"C" ])
     unkcomp = read(db, Material, find(db,Material,"ADM6005a"))
-    ffrs = NeXLSpectrum.fit(db, DBFitSpectra, cfs, unkcomp)
+    ffrs = fit_spectrum(db, DBFitSpectra, cfs, unkcomp)
 
     @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, atol = 0.002)
     @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)

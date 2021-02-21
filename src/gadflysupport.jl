@@ -65,6 +65,7 @@ function plot_ratio(
         Stat.x_jitter(range = 0.8),
         Guide.xlabel("Shell"),
         Guide.ylabel("k[Measured]/k[$(repr(nameof(mc))[2:end])]"),
+        Guide.colorkey(title="Measurement"),
         Scale.x_discrete(levels = ["K", "L", "M"]),
         Coord.cartesian(xmin = 1, xmax = 3),
     )
@@ -98,6 +99,7 @@ function plot_xy(
             end
         end
     end
+    abline = Geom.abline(color="red", style=:dash)
     plot(
         x = x,
         y = y,
@@ -107,7 +109,8 @@ function plot_xy(
         Geom.errorbar,
         Guide.xlabel("k[$(repr(nameof(mc))[2:end])]"),
         Guide.ylabel("k[Measured]"),
-        Coord.cartesian(xmin = 0.0),
+        Guide.colorkey(title="Measurement"),
+        abline, intercept=[0.0],slope=[1.0],
     )
 end
 

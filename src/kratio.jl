@@ -51,7 +51,7 @@ function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec::Union{Int,Nothin
 end
 
 function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio}; withComputedKs::Bool = false)
-    fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{Material,Missing}
+    fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{<:Material,Missing}
     fs, lines, mease0, meastoa, meascomp = Int[], String[], fm[], fm[], cm[]
     refe0, reftoa, refcomp, krv, dkrv, cks, ratio = fm[], fm[], cm[], Float64[], Float64[], fm[], fm[]
     for kr in krs
@@ -124,7 +124,7 @@ function Base.write(
     )
     meascompidx = write(db, meascomp)
     for lbl in filter(l -> (l isa CharXRayLabel) && (value(res[l]) > 0.0), labels(res))
-        @show lbl, value(res[lbl])
+        # @show lbl, value(res[lbl])
         ref, br = spectrum(lbl), brightest(lbl.xrays)
         refcomp = ref[:Composition]
         refcompidx = write(db, refcomp)

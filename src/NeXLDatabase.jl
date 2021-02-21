@@ -36,7 +36,7 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "kratio", "standardfor" #
     )
     for tbl in tables
-        if (length(existing)==0) || (!(uppercase(tbl) in existing.name))
+        if (!haskey(existing, :name)) || (!(uppercase(tbl) in existing.name))
             # @info "Creating database table $(tbl)."
             buildTable(tbl)
         end

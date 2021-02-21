@@ -6,7 +6,7 @@ CREATE TABLE SPECTRUM (
     COMPOSITION INTEGER,
     COLLECTEDBY INTEGER NOT NULL,  -- PERSON(PKEY)
     SAMPLE INTEGER NOT NULL, -- SAMPLE(PKEY)
-    COLLECTED TIMESTAMP NOT NULL,
+    COLLECTED REAL NOT NULL, -- Relative to proleptic Gregorian calendar epoch in days
     NAME TEXT,
     ARTIFACT INT NOT NULL, -- The spectrum data in a standard spectrum file format
     FOREIGN KEY(DETECTOR) REFERENCES DETECTOR(PKEY),

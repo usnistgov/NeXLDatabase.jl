@@ -82,10 +82,10 @@ function Base.delete!(db::SQLite.DB, ::Type{Material}, matname::AbstractString)
     end
 end
 
-Base.filter(db::SQLite.DB, ::Type{Material}, prs::Pair{Element, ClosedInterval{Float64}}...)::Vector{Material} =
+Base.filter(db::SQLite.DB, ::Type{Material}, prs::Pair{Element, ClosedInterval{Float64}}...)::Vector{<:Material} =
     filter(db, Material, Dict(prs...))
 
-function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, ClosedInterval{Float64}})::Vector{Material}
+function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, ClosedInterval{Float64}})::Vector{<:Material}
     cmds, args = String[], Any[]
     for (elm, ci) in filt
         push!(cmds, "SELECT MATKEY FROM MASSFRACTION WHERE MFZ=? AND MFC>=? and MFC<=?")
@@ -96,7 +96,7 @@ function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, Closed
     return [ read(db, Material, r[:MATKEY]) for r in q ]
 end
 
-function Base.similar(db::SQLite.DB, mat::Material, tol::Float64)::Vector{Material}
+function Base.similar(db::SQLite.DB, mat::Material, tol::Float64)::Vector{<:Material}
     interval(el) = max(0.0,mat[el]-tol)..(mat[el]+tol)
     return filter(db, Material, Dict(elm=>interval(elm) for elm in keys(mat)))
 end

@@ -25,9 +25,9 @@ Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [compat]
 Colors = "^0.12.3"
-DataFrames = "^0.21.4, ^0.22.0"
+DataFrames = "0.21, ^0.22"
 Gadfly = "^1.3"
-IntervalSets = "^0.5.1"
+IntervalSets = "^0.5"
 NeXLCore = "^0.2"
 NeXLMatrixCorrection = "^0.2"
 NeXLSpectrum = "^0.2"

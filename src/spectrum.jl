@@ -2,7 +2,7 @@ struct DBSpectrum
     pkey::Int
     detector::DBDetector
     beamenergy::Float64
-    composition::Union{Material,Missing}
+    composition::Union{<:Material,Missing}
     collectedby::DBPerson
     sample::DBSample
     collected::DateTime
@@ -37,7 +37,7 @@ function Base.write(#
     end
     artifact = write(db, DBArtifact, filename, format)
     stmt1 = SQLite.Stmt(db, "INSERT INTO SPECTRUM ( DETECTOR, BEAMENERGY, COMPOSITION, COLLECTEDBY, SAMPLE, COLLECTED, NAME, ARTIFACT ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );")
-    results = DBInterface.execute(stmt1, (det, e0, comp, collectedBy, sample, collected, name, artifact ))
+    results = DBInterface.execute(stmt1, (det, e0, comp, collectedBy, sample, Dates.datetime2julian(collected), name, artifact ))
     return  DBInterface.lastrowid(results)
 end
 
@@ -46,7 +46,7 @@ function Base.write(#
         ::Type{DBSpectrum}, #
         det::DBDetector, #
         e0::Float64, #
-        comp::Union{Material, Missing}, #
+        comp::Union{<:Material, Missing}, #
         collectedBy::DBPerson, #
         sample::DBSample, #
         collected::DateTime, #
@@ -66,10 +66,11 @@ function Base.read(db::SQLite.DB, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
     r=SQLite.Row(q)
     mat = r[:COMPOSITION] >= 0 ? read(db,Material,r[:COMPOSITION]) : missing
     det = read(db, DBDetector, r[:DETECTOR])
-    coll = read(db, DBPerson, r[:COLLECTEDBY])
+    colby = read(db, DBPerson, r[:COLLECTEDBY])
     samp = read(db, DBSample, r[:SAMPLE])
     art = read(db, DBArtifact, r[:ARTIFACT])
-    return DBSpectrum( r[:PKEY], det, r[:BEAMENERGY], mat, coll, samp, r[:COLLECTED], r[:NAME], art)
+    acq = Dates.julian2datetime(r[:COLLECTED])
+    return DBSpectrum( r[:PKEY], det, r[:BEAMENERGY], mat, colby, samp, acq, r[:NAME], art)
 end
 
 function NeXLUncertainties.asa(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
