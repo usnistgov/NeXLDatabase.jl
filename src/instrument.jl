@@ -215,3 +215,8 @@ function find(db::SQLite.DB, ::Type{DBDetector}, inst::DBInstrument, desc::Strin
     q = DBInterface.execute(stmt1, (inst.pkey, desc))
     return SQLite.done(q) ? missing : read(db, DBDetector, r[:PKEY])
 end
+
+
+function simpleEDS(dbd::DBDetector, channelcount::Int)
+    return BasicEDS(channelcount, dbd.zero, dbd.gain, dbd.resolution, dbd.lld)
+end

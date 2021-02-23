@@ -2,7 +2,7 @@ struct DBSpectrum
     pkey::Int
     detector::DBDetector
     beamenergy::Float64
-    composition::Union{<:Material,Missing}
+    composition::Union{Material,Missing}
     collectedby::DBPerson
     sample::DBSample
     collected::DateTime
@@ -46,7 +46,7 @@ function Base.write(#
         ::Type{DBSpectrum}, #
         det::DBDetector, #
         e0::Float64, #
-        comp::Union{<:Material, Missing}, #
+        comp::Union{Material, Missing}, #
         collectedBy::DBPerson, #
         sample::DBSample, #
         collected::DateTime, #

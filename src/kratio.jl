@@ -51,7 +51,7 @@ function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec::Union{Int,Nothin
 end
 
 function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio}; withComputedKs::Bool = false)
-    fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{<:Material,Missing}
+    fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{Material,Missing}
     fs, lines, mease0, meastoa, meascomp = Int[], String[], fm[], fm[], cm[]
     refe0, reftoa, refcomp, krv, dkrv, cks, ratio = fm[], fm[], cm[], Float64[], Float64[], fm[], fm[]
     for kr in krs
@@ -151,5 +151,15 @@ function Base.write(
                 uncertainty(res[lbl]),
             ),
         )
+    end
+end
+
+function NeXLMatrixCorrection.quantify( #
+    dbkrs::AbstractVector{DBKRatio}, #
+    strip::AbstractVector{Element}=Element[] #
+)::Vector{IterationResult}
+    map(unique(map(dbkr->dbkr.spectrum, dbkrs))) do spec
+        krs = asa.(KRatio, filter(dbkr->dbkr.spectrum==spec && !(element(dbkr.primary) in strip), dbkrs))
+        quantify("Unknown[$spec]", krs)
     end
 end

@@ -199,10 +199,16 @@ Sets the disposition of this set of fitted spectra.
   * `"Accepted: "*msg` - Reviewed and accepted with optional `msg`
 """
 function disposition!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, value::String)
+    @assert isequal("Pending", value) || startswith(value, "Rejected") || startswith("Accepted") 
+        "The disposition must be \"Pending\" or start with \"Rejected\" or \"Accepted\""
     stmt1 = SQLite.Stmt(db, "UPDATE FITSPECTRA SET DISPOSITION = ? WHERE PKEY=?;")
     DBInterface.execute(stmt1, (pkey, value))
     return value
 end
+function disposition!(db::SQLite.DB, ::Type{DBFitSpectra}, fitspec::DBFitSpectra, value::String)
+    return disposition!(db, DBFitSpectra, fitspec.pkey, value)
+end
+
 
 function Base.delete!(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int)
     stmt1 = SQLite.Stmt(db, "DELETE FROM FITSPECTRA WHERE PKEY=?;")

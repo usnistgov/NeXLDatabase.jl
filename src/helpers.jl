@@ -57,3 +57,37 @@ function NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::In
     end
     return ress
 end
+
+"""
+    NeXLMatrixCorrection.quantify(#
+        db::SQLite.DB, #
+        ::Type{DBFitSpectra}, #
+        pkey::Int; #
+        strip::AbstractVector{Element} = Element[],
+        mc::Type{<:MatrixCorrection} = XPP,
+        fl::Type{<:FluorescenceCorrection} = ReedFluorescence,
+        cc::Type{<:CoatingCorrection} = Coating,
+        kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
+    )::Vector{IterationResult}
+
+Quantify the k-ratios in the database associated with te specified DBFitSpectra.
+"""
+function NeXLMatrixCorrection.quantify(#
+    db::SQLite.DB, #
+    ::Type{DBFitSpectra}, #
+    pkey::Int; #
+    strip::AbstractVector{Element} = Element[],
+    mc::Type{<:MatrixCorrection} = XPP,
+    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating,
+    kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
+    unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
+)::Vector{IterationResult}
+    krs = findall(db, DBKRatio, fitspec=pkey, mink=0.0)
+    iter = Iteration(mc, fc, cc, unmeasured = unmeasured)
+    map(unique(kr.spectrum for kr in krs)) do spec
+        skrs = asa.(KRatio, filter(kr->kr.spectrum==spec, krs))
+        okrs = optimizeks(kro, filter(kr -> !(element(kr) in strip), skrs))
+        quantify(iter, label("Unknown[$spec]"), okrs)
+    end
+end
