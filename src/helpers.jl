@@ -31,6 +31,12 @@ function constructFitSpectra(
     end
 end
 
+"""
+    NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcomp::Union{Material, Nothing}=nothing)
+
+Fit a collection of spectra from the database against the reference spectra associated in the database with it.  If 
+`unkcomp` is provided then previous k-ratio results are deleted and the new k-ratio results are written to the database.
+"""
 function NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::Int, unkcomp::Union{Material, Nothing}=nothing)::Vector{FilterFitResult}
     fs = read(db, NeXLDatabase.DBFitSpectra, pkey)
     unks = measured(fs)
@@ -58,36 +64,5 @@ function NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBFitSpectra}, pkey::In
     return ress
 end
 
-"""
-    NeXLMatrixCorrection.quantify(#
-        db::SQLite.DB, #
-        ::Type{DBFitSpectra}, #
-        pkey::Int; #
-        strip::AbstractVector{Element} = Element[],
-        mc::Type{<:MatrixCorrection} = XPP,
-        fl::Type{<:FluorescenceCorrection} = ReedFluorescence,
-        cc::Type{<:CoatingCorrection} = Coating,
-        kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
-    )::Vector{IterationResult}
 
-Quantify the k-ratios in the database associated with te specified DBFitSpectra.
-"""
-function NeXLMatrixCorrection.quantify(#
-    db::SQLite.DB, #
-    ::Type{DBFitSpectra}, #
-    pkey::Int; #
-    strip::AbstractVector{Element} = Element[],
-    mc::Type{<:MatrixCorrection} = XPP,
-    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
-    cc::Type{<:CoatingCorrection} = Coating,
-    kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
-    unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
-)::Vector{IterationResult}
-    krs = findall(db, DBKRatio, fitspec=pkey, mink=0.0)
-    iter = Iteration(mc, fc, cc, unmeasured = unmeasured)
-    map(unique(kr.spectrum for kr in krs)) do spec
-        skrs = asa.(KRatio, filter(kr->kr.spectrum==spec, krs))
-        okrs = optimizeks(kro, filter(kr -> !(element(kr) in strip), skrs))
-        quantify(iter, label("Unknown[$spec]"), okrs)
-    end
-end
+

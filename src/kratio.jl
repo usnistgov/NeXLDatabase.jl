@@ -154,12 +154,32 @@ function Base.write(
     end
 end
 
-function NeXLMatrixCorrection.quantify( #
-    dbkrs::AbstractVector{DBKRatio}, #
-    strip::AbstractVector{Element}=Element[] #
+"""
+    NeXLMatrixCorrection.quantify(#
+        krs::AbstractVector{DBKRatio};
+        strip::AbstractVector{Element} = Element[],
+        mc::Type{<:MatrixCorrection} = XPP,
+        fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+        cc::Type{<:CoatingCorrection} = Coating,
+        kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
+        unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
+    )::Vector{IterationResult}
+
+Quantify a collection of `DBKRatio`.
+"""
+function NeXLMatrixCorrection.quantify(#
+    krs::AbstractVector{DBKRatio};
+    strip::AbstractVector{Element} = Element[],
+    mc::Type{<:MatrixCorrection} = XPP,
+    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating,
+    kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
+    unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
 )::Vector{IterationResult}
-    map(unique(map(dbkr->dbkr.spectrum, dbkrs))) do spec
-        krs = asa.(KRatio, filter(dbkr->dbkr.spectrum==spec && !(element(dbkr.primary) in strip), dbkrs))
-        quantify("Unknown[$spec]", krs)
+    iter = Iteration(mc, fc, cc, unmeasured = unmeasured)
+    map(unique(kr.spectrum for kr in krs)) do spec
+        skrs = asa.(KRatio, filter(kr->kr.spectrum==spec, krs))
+        okrs = optimizeks(kro, filter(kr -> !(element(kr) in strip), skrs))
+        quantify(iter, label("Unknown[$spec]"), okrs)
     end
 end

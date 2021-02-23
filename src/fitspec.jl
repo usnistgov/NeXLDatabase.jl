@@ -258,3 +258,26 @@ function NeXLUncertainties.asa(::Type{DataFrame}, dbfss::AbstractArray{DBFitSpec
         Disposition= [ dbfs.disposition for dbfs in dedup ]
     )
 end
+
+"""
+    NeXLMatrixCorrection.quantify(#
+        db::SQLite.DB, #
+        ::Type{DBFitSpectra}, #
+        pkey::Int; #
+        strip::AbstractVector{Element} = Element[],
+        mc::Type{<:MatrixCorrection} = XPP,
+        fl::Type{<:FluorescenceCorrection} = ReedFluorescence,
+        cc::Type{<:CoatingCorrection} = Coating,
+        kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
+    )::Vector{IterationResult}
+
+Quantify the k-ratios in the database associated with te specified DBFitSpectra.
+"""
+function NeXLMatrixCorrection.quantify(#
+    db::SQLite.DB, #
+    ::Type{DBFitSpectra}, #
+    pkey::Int; #
+    args...
+)::Vector{IterationResult}
+    quantify(findall(db, DBKRatio, fitspec=pkey, mink=0.0), args...)
+end
