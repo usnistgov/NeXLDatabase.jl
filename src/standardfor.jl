@@ -7,7 +7,7 @@ struct DBStandardFor
     material::Material
 end
 
-function Base.write(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element, mat::Union{String, <:Material, Integer})
+function Base.write(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element, mat::Union{String, Material, Integer})
     if mat isa String
         matkey = find(db, Material, mat)
         mat = read(db, Material, matkey)

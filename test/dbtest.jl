@@ -153,14 +153,14 @@ end
             path = joinpath(@__DIR__, "ADM-6005a")
             project = write(db, DBProject, "ADM-6005a Test", "Description of ADM-6005a Test", read(db, DBPerson, "hsb@gmail.com"), testproj)
             det, person, e0, comp = 1, 2, 20.0e3, find(db, Material, "ADM6005a")
-            fitspectra =
-                write(db, NeXLDatabase.DBFitSpectra, project, det, [n"O", n"Al", n"Si", n"Ca", n"Ti", n"Zn", n"Ge"])
+            campaign =
+                write(db, NeXLDatabase.DBCampaign, project, det, [n"O", n"Al", n"Si", n"Ca", n"Ti", n"Zn", n"Ge"])
             sample = write(db, DBSample, 1, "ADM-6005a block", "ADM-6005a prepared by Eric Windsor")
             dt = DateTime(Date(2019, 7, 12), Time(9, 30, 0))
             for i in 1:15
                 fn = "$path\\ADM-6005a_$(i).msa"
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "ADM-6005a[$i]", fn, "EMSA")
-                write(db, NeXLDatabase.DBFitSpectrum, fitspectra, spec)
+                write(db, NeXLDatabase.DBFitSpectrum, campaign, spec)
             end
             block1 = write(db, DBSample, 1, "Standard Block C", "NIST Standard Block C")
             block2 = write(db, DBSample, 1, "High TC Block", "NIST High Temperature Superconductor Block")
@@ -173,7 +173,7 @@ end
                 end
                 sample = write(db, DBSample, block1, 1, ref, "$ref standard")
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
-                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material, ref))...])
+                ref = write(db, NeXLDatabase.DBReference, campaign, spec, [keys(parse(Material, ref))...])
             end
             for ref in ("CaF2",)
                 fn = "$path\\$(ref) std.msa"
@@ -183,11 +183,11 @@ end
                 end
                 sample = write(db, DBSample, block2, 1, ref, "$ref standard")
                 spec = write(db, DBSpectrum, det, e0, comp, person, sample, dt, "$ref std", fn, "EMSA")
-                ref = write(db, NeXLDatabase.DBReference, fitspectra, spec, [keys(parse(Material, ref))...])
+                ref = write(db, NeXLDatabase.DBReference, campaign, spec, [keys(parse(Material, ref))...])
             end
         end
 
-        fs = read(db, NeXLDatabase.DBFitSpectra, 1)
+        fs = read(db, NeXLDatabase.DBCampaign, 1)
         @test fs.detector.vendor == "Bruker"
         @test fs.project.name == "ADM-6005a Test"
         @test !(n"Fe" in fs.elements)
@@ -211,7 +211,7 @@ end
 
     path = joinpath(@__DIR__, "ADM-6005a")
 
-    cfs = constructFitSpectra(db, project, sample, unkComp, detector, person, e0,
+    cfs = write(db, DBCampaign, project, sample, unkComp, detector, person, e0,
         [ joinpath(path,"ADM-6005a_$(i).msa") for i in 1:15 ], [
         # DBSample, Union{Material, Missing}, String, Float64, Vector{Element}}
         ( blkC, parse(Material,"Al"), joinpath(path,"Al std.msa"), e0, [ n"Al" ]),
@@ -224,7 +224,7 @@ end
         ( hiTC, parse(Material,"CaF2"), joinpath(path,"CaF2 std.msa"), e0, [ n"Ca", n"F", n"C" ])
         ], [ n"C" ])
     unkcomp = read(db, Material, find(db,Material,"ADM6005a"))
-    ffrs = fit_spectrum(db, DBFitSpectra, cfs, unkcomp)
+    ffrs = fit_spectrum(db, DBCampaign, cfs, unkcomp)
 
     @test isapprox(mean(value.(kratio(n"O K-L3", ffr) for ffr in ffrs)), 0.4896, atol = 0.002)
     @test isapprox(mean(value.(kratio(n"Si K-L3", ffr) for ffr in ffrs)), 0.0214, atol = 0.013)

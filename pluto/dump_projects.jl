@@ -60,7 +60,7 @@ end
 # ╔═╡ c602c890-1a27-11eb-19fc-c79cbf0026c1
 begin
 	theproject = projects[parse(Int,pidx)] 
-	fspecs = findall(db, DBFitSpectra, project=theproject)
+	fspecs = findall(db, DBCampaign, project=theproject)
 	asa(DataFrame, fspecs) 
 end
 

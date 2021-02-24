@@ -60,7 +60,7 @@ begin
 end
 
 # ╔═╡ cb991c00-1888-11eb-02fb-b33a153473dc
-asa(DataFrame, DBFitSpectra[ read(db, DBFitSpectra, kr.fitspectra) for kr in krs])
+asa(DataFrame, DBCampaign[ read(db, DBCampaign, kr.campaign) for kr in krs])
 
 # ╔═╡ 6185fa20-19d9-11eb-04d3-3132221ca798
 begin

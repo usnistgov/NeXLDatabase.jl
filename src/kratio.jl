@@ -2,7 +2,7 @@ using NeXLMatrixCorrection
 
 struct DBKRatio
     pkey::Int
-    fitspectra::Int
+    campaign::Int
     spectrum::Int
     primary::CharXRay
     lines::Vector{CharXRay}
@@ -17,9 +17,9 @@ function Base.show(io::IO, kr::DBKRatio)
 end
 
 function krname(kr::DBKRatio)
-    return "K[($(name(kr.measured[:Composition])) @ $(0.001*kr.measured[:BeamEnergy]) keV)/($(name(kr.reference[:Composition])) @ $(0.001*kr.reference[:BeamEnergy]) keV)"
+    nm = haskey(kr.measured, :Composition) ? name(kr.measured[:Composition]) : "Unspecified"
+    return "K[($nm @ $(0.001*kr.measured[:BeamEnergy]) keV)/($(name(kr.reference[:Composition])) @ $(0.001*kr.reference[:BeamEnergy]) keV)"
 end
-
 
 function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     stmt = SQLite.Stmt(db, "SELECT * FROM KRATIO WHERE PKEY=?;")
@@ -28,35 +28,44 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     r = SQLite.Row(q)
     primary = CharXRay(r[:ELEMENT], Transition(SubShell(r[:INNER]), SubShell(r[:OUTER])))
     lines = map(s -> parse(CharXRay, s), split(r[:LINES], ","))
-    meas =
-        Dict(:BeamEnergy => r[:MEASE0], :TakeOffAngle => r[:MEASTOA], :Composition => read(db, Material, r[:MEASURED]))
-    ref = Dict(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
+    meas = Dict{Symbol,Any}(:BeamEnergy => r[:MEASE0], :TakeOffAngle => r[:MEASTOA])
+    if r[:MEASURED] != -1
+        meas[:Composition] = read(db, Material, r[:MEASURED])
+    end
+    ref = Dict{Symbol,Any}(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
     kr = uv(r[:KRATIO], r[:DKRATIO])
-    return DBKRatio(pkey, r[:FITSPEC], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
+    return DBKRatio(pkey, r[:CAMPAIGN], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; fitspec::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
+function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; campaign::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
     bs, args = "KRATIO >= ?", [ mink, ]
-    if !isnothing(fitspec)
-        bs *= " AND FITSPEC = ?"
-        push!(args,fitspec)
+    if !isnothing(campaign)
+        bs *= " AND CAMPAIGN = ?"
+        push!(args, campaign)
     end
     if !isnothing(elm)
         bs *= " AND ELEMENT=?"
-        push!(args,z(elm))
+        push!(args, z(elm))
     end
     stmt = SQLite.Stmt(db, "SELECT PKEY FROM KRATIO WHERE $bs;")
     q = DBInterface.execute(stmt, args)
     return SQLite.done(q) ? [] : [read(db, DBKRatio, r[:PKEY]) for r in q]
 end
 
-function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio}; withComputedKs::Bool = false)
+function NeXLUncertainties.asa(
+    ::Type{DataFrame}, #
+    krs::AbstractVector{DBKRatio}; #
+    withComputedKs::Bool = false, #
+    mc::Type{<:MatrixCorrection} = XPP,
+    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating
+)
     fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{Material,Missing}
-    fs, lines, mease0, meastoa, meascomp = Int[], String[], fm[], fm[], cm[]
-    refe0, reftoa, refcomp, krv, dkrv, cks, ratio = fm[], fm[], cm[], Float64[], Float64[], fm[], fm[]
+    fs, lines, mease0, meastoa, meascomp = Int[], Vector{CharXRay}[], Float64[], Float64[], cm[]
+    refe0, reftoa, refcomp, krv, dkrv, cks, ratio = Float64[], Float64[], cm[], Float64[], Float64[], fm[], fm[]
     for kr in krs
-        push!(fs, kr.fitspectra)
-        push!(lines, repr(kr.lines))
+        push!(fs, kr.campaign)
+        push!(lines, kr.lines)
         meas = kr.measured
         push!(mease0, get(meas, :BeamEnergy, missing))
         push!(meastoa, get(meas, :TakeOffAngle, missing))
@@ -76,8 +85,8 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
                 push!(ratio, missing)
             else
                 br = [ kr.primary ]
-                zs = zafcorrection(XPP, ReedFluorescence, Coating, meascomp[end], br, mease0[end])
-                zr = zafcorrection(XPP, ReedFluorescence, Coating, refcomp[end], br, refe0[end])
+                zs = zafcorrection(mc, fc, cc, meascomp[end], br, mease0[end])
+                zr = zafcorrection(mc, fc, cc, refcomp[end], br, refe0[end])
                 k =
                     gZAFc(zs, zr, meastoa[end], reftoa[end]) * NeXLCore.nonneg(meascomp[end], elm) /
                     NeXLCore.nonneg(refcomp[end], elm)
@@ -87,14 +96,14 @@ function NeXLUncertainties.asa(::Type{DataFrame}, krs::AbstractVector{DBKRatio};
         end
     end
     res = DataFrame(
-        Batch = fs,
+        Campaign = fs,
         Lines = lines,
+        Cmeas = meascomp,
         E0meas = mease0,
         TOAmeas = meastoa,
-        Cmeas = meascomp,
+        Cref = refcomp,
         E0ref = refe0,
         TOAref = reftoa,
-        Cref = refcomp,
         K = krv,
         ΔK = dkrv,
     )
@@ -111,18 +120,19 @@ NeXLUncertainties.asa(::Type{KRatio}, dbkr::DBKRatio)::KRatio =
 function Base.write(
     db::SQLite.DB,
     ::Type{DBKRatio},
-    fitspec::DBFitSpectra,
+    campaign::DBCampaign,
     meas::Spectrum,
-    meascomp::Material,
+    meascomp::Union{Material,Missing},
     res::FilterFitResult,
 )
     stmt1 = SQLite.Stmt(
         db,
-        "INSERT INTO KRATIO(FITSPEC, SPECPKEY, ELEMENT, INNER, OUTER, MODE, MEASURED, MEASNAME, MEASE0, MEASTOA, " *
+        "INSERT INTO KRATIO(CAMPAIGN, SPECPKEY, ELEMENT, INNER, OUTER, MODE, MEASURED, MEASNAME, MEASE0, MEASTOA, " *
         "REFERENCE, REFNAME, REFE0, REFTOA, PRINCIPAL, LINES, KRATIO, DKRATIO) VALUES (" *
         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     )
-    meascompidx = write(db, meascomp)
+    meascompidx = ismissing(meascomp) ? -1 : write(db, meascomp)
+    measname = ismissing(meascomp) ? "Unknown" : name(meascomp)
     for lbl in filter(l -> (l isa CharXRayLabel) && (value(res[l]) > 0.0), labels(res))
         # @show lbl, value(res[lbl])
         ref, br = spectrum(lbl), brightest(lbl.xrays)
@@ -131,14 +141,14 @@ function Base.write(
         r = DBInterface.execute(
             stmt1,
             (
-                fitspec.pkey, #
+                campaign.pkey, #
                 meas[:PKEY],
                 z(element(br)),
                 inner(br).subshell.index,
                 outer(br).subshell.index,
                 "EDX", #
                 meascompidx,
-                meascomp.name,
+                measname,
                 meas[:BeamEnergy],
                 meas[:TakeOffAngle], #
                 refcompidx,

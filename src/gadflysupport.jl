@@ -16,65 +16,43 @@ function Gadfly.plot(
     dbkrs::AbstractArray{DBKRatio};
     mc::Type{<:MatrixCorrection} = XPP,
     fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating,
     style::Symbol = :Ratio
 )
     if style==:Ratio
-        plot_ratio(dbkrs, mc, fc)
+        plot_ratio(dbkrs, mc, fc, cc)
     else
         plot_xy(dbkrs, mc, fc)
     end
 end
 
-
 function plot_ratio(
     dbkrs::AbstractArray{DBKRatio},
     mc::Type{<:MatrixCorrection} = XPP,
-    fc::Type{<:FluorescenceCorrection} = ReedFluorescence
+    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating,
 )
-    mfs, kok, dkok, color = String[], Float64[], Float64[], String[]
-    next = 0
-    for dbkr in dbkrs
-        kr, unkComp = asa(KRatio, dbkr), get(dbkr.measured, :Composition, missing)
-        if hasminrequired(mc, kr.unkProps) &&
-           hasminrequired(fc, kr.unkProps) && #
-           hasminrequired(mc, kr.stdProps) &&
-           hasminrequired(fc, kr.stdProps) && #
-           (!isnothing(unkComp)) &&
-           (value(unkComp[kr.element]) > 0.0) &&
-           (value(kr.standard[kr.element]) > 0.0)
-            try
-                # Compute the k-ratio
-                kc = gZAFc(kr, unkComp) * (value(unkComp[kr.element]) / value(kr.standard[kr.element]))
-                push!(mfs, name(shell(brightest(kr.lines)))) # value(unkComp[kr.element]))
-                push!(kok, value(kr.kratio) / kc)
-                push!(dkok, σ(kr.kratio) / kc)
-                push!(color, "$(symbol(kr.element)) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV")
-            catch c
-                @info "Failed on $dbkr - $c"
-            end
-        end
-    end
-    plot(
-        x = mfs,
-        y = kok,
-        ymin = kok .- dkok,
-        ymax = kok .+ dkok,
-        color = color,
-        Geom.errorbar,
-        # Geom.point,
-        Stat.x_jitter(range = 0.8),
-        Guide.xlabel("Shell"),
-        Guide.ylabel("k[Measured]/k[$(repr(nameof(mc))[2:end])]"),
-        Guide.colorkey(title="Measurement"),
-        Scale.x_discrete(levels = ["K", "L", "M"]),
-        Coord.cartesian(xmin = 1, xmax = 3),
-    )
+  df = asa(DataFrame, dbkrs, withComputedKs=true, mc=mc, fc=fc, cc=cc)
+  df[:, "Element"] = symbol.(element.(brightest.(df[:,"Lines"]))) 
+  df[:, "Z"] = z.(element.(brightest.(df[:,"Lines"])))
+  df[:, "Family"] = name.(df[:,"Lines"], true)
+  df[:, "RU"] = map(r->uv(r["K"],r["ΔK"])/r["Kxpp"], eachrow(df))
+  df[:, "Rmin"] = map(r-> value(r["RU"])-σ(r["RU"]), eachrow(df))
+  df[:, "Rmax"] = map(r-> value(r["RU"])+σ(r["RU"]), eachrow(df))
+  df[:,"Measurement"] = map(r->"$(name(r["Cmeas"])) at $(r["E0meas"]/1000.0) keV", eachrow(df))
+  df[:,"Rand"] = rand(nrow(df)) # To plot points in a randomized order.
+  sort!(df, [:Family, :E0meas, :Z, :Rand])
+  # yin, yax = something(ymin, 0.9*minimum(skipmissing(df[:,"Rmin"]))), something(ymax, 1.1*maximum(skipmissing(df[:,"Rmax"])))
+  plot(df, xgroup="Family", x="Element", ymin="Rmin", ymax="Rmax", y="Ratio", color="Measurement", 
+     # Coord.cartesian(ymin=yin, ymax=yax), Stat.x_jitter(range=1.0), # Neither seems to work... 
+     Geom.subplot_grid(Geom.errorbar), Stat.x_jitter(range=1000.0))
 end
 
 function plot_xy(
     dbkrs::AbstractArray{DBKRatio},
     mc::Type{<:MatrixCorrection} = XPP,
-    fc::Type{<:FluorescenceCorrection} = ReedFluorescence
+    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
+    cc::Type{<:CoatingCorrection} = Coating,
 )
     x, y, dy, color = Float64[], Float64[], Float64[], String[]
     next = 0
@@ -89,7 +67,7 @@ function plot_xy(
            (value(kr.standard[kr.element]) > 0.0)
             try
                 # Compute the k-ratio
-                kc = gZAFc(kr, unkComp) * (value(unkComp[kr.element]) / value(kr.standard[kr.element]))
+                kc = gZAFc(kr, unkComp, mc=mc, fc=fc, cc=cc) * (value(unkComp[kr.element]) / value(kr.standard[kr.element]))
                 push!(y, value(kr.kratio))
                 push!(dy, σ(kr.kratio))
                 push!(x, kc)
