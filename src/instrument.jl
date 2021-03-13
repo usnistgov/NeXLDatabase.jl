@@ -81,6 +81,7 @@ end
 #);
 
 struct DBDetector
+    database::SQLite.DB
     pkey::Int
     instrument::DBInstrument
     vendor::String
@@ -160,6 +161,7 @@ function Base.read(db::SQLite.DB, ::Type{DBDetector}, pkey::Int)::DBDetector
     end
     r = SQLite.Row(q)
     return DBDetector(
+        db,
         r[:PKEY],
         read(
             db,

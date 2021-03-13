@@ -1,6 +1,7 @@
 using DataFrames
 
 struct DBPerson
+    database::SQLite.DB
     pkey::Int
     name::String
     email::String
@@ -30,7 +31,7 @@ function Base.read(db::SQLite.DB, ::Type{DBPerson}, pkey::Int)::DBPerson
         error("No known person with key '$(pkey)'.")
     end
     r = SQLite.Row(q)
-    return DBPerson(r[:PKEY], r[:NAME], r[:EMAIL])
+    return DBPerson(db, r[:PKEY], r[:NAME], r[:EMAIL])
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBPerson})::Vector{DBPerson}
@@ -52,5 +53,5 @@ function Base.read(db::SQLite.DB, ::Type{DBPerson}, email::String)::DBPerson
         error("No known person with e-mail '$(email)'.")
     end
     r = SQLite.Row(q)
-    return DBPerson(r[:PKEY], r[:NAME], r[:EMAIL])
+    return DBPerson(db, r[:PKEY], r[:NAME], r[:EMAIL])
 end

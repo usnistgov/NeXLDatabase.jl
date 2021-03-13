@@ -1,13 +1,13 @@
-
 """
 What element(s) is this material suitable as a standard for?
 """
 struct DBStandardFor
+    database::SQLite.DB
     element::Element
     material::Material
 end
 
-function Base.write(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element, mat::Union{String, <:Material, Integer})
+function Base.write(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element, mat::Union{String, Material, Integer})
     if mat isa String
         matkey = find(db, Material, mat)
         mat = read(db, Material, matkey)
@@ -24,7 +24,7 @@ function Base.write(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element, mat::Uni
         stmt1 = SQLite.Stmt(db, "INSERT INTO STANDARDFOR ( ELEMENT, MATKEY ) VALUES ( ?, ? );")
         DBInterface.execute(stmt1, ( z(elm), matkey, ) )
     end
-    return DBStandardFor(elm, mat)
+    return lastrowid(q1)
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBStandardFor}, elm::Element)::Array{DBMaterial}

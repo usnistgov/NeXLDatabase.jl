@@ -79,13 +79,13 @@ if false
     #(blockC, mat"Zn", joinpath(sulfides10,"EDITED_Standards_10keV","Zn_StdC_10kV10nA130kHz_300s.msa"), e0, noCoating ),
   ]
 
-  cfs = constructFitSpectra(db, project, sample, unkComp, brukersingle, analyst, e0, unks, stds, noCoating)
+  cfs = write(db, DBCampaign, project, sample, unkComp, brukersingle, analyst, e0, unks, stds, noCoating)
 else
   cfs = 85
 end
 
 unkComp = parse(Material, "FeS", pedigree="Stoichiometric")
-ffrs = fit_spectrum(db, DBFitSpectra, cfs, unkComp)
+ffrs = fit_spectrum(db, DBCampaign, cfs, unkComp)
 display(asa(DataFrame, ffrs))
 display(plot(ffrs[1]))
 #display(plot(loadspectrum.(unks)...,klms=[ n"C", keys(unkComp)... ], xmax=10.0e3))

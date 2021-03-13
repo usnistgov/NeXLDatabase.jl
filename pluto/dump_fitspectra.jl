@@ -34,7 +34,7 @@ md"""
 
 # ╔═╡ 18221310-1a0f-11eb-39f2-7b9c81700306
 begin
-	fs = read(db, DBFitSpectra, pkey)
+	fs = read(db, DBCampaign, pkey)
 	asa(DataFrame, fs)
 end
 
@@ -62,7 +62,7 @@ asa(DataFrame, fs.refspectrum)
 
 # ╔═╡ b1aea0f0-1a11-11eb-36a4-6d433b7c97d8
 begin
-	references2(fbfs::DBFitSpectra, elm::Element)::Vector{Spectrum} = map(ref->asa(Spectrum,ref), dbreferences(fbfs, elm))
+	references2(fbfs::DBCampaign, elm::Element)::Vector{Spectrum} = map(ref->asa(Spectrum,ref), dbreferences(fbfs, elm))
 	set_default_plot_size(8inch,3inch)
 	refs = mapreduce(el->references2(fs,el), append!, elements(fs))
 	plot(refs, norm=ScaleDose(), klms=elements(fs))

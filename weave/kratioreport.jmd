@@ -21,8 +21,8 @@ Base.display(report::Weave.Report, m::MIME"text/html", data::HTML) =
 	report.rich_output *= string('\n', data.content)
 
 
-db, fspkey, mode = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:FitSpectra], haskey(WEAVE_ARGS, :MC) ? WEAVE_ARGS[:MC] : 'X'
-fs = read(db, DBFitSpectra, fspkey);
+db, fspkey, mode = openNeXLDatabase(WEAVE_ARGS[:Database]), WEAVE_ARGS[:Campaign], haskey(WEAVE_ARGS, :MC) ? WEAVE_ARGS[:MC] : 'X'
+fs = read(db, DBCampaign, fspkey);
 nothing
 ```
 ![NeXL](NeXL_sm.png)
@@ -57,7 +57,7 @@ asa(DataFrame, fs.refspectrum)
 The k-ratio is the ratio of the intensity in the measured to the intensity in the reference for a specific set of
 characteristic x-ray lines.
 ```julia; echo=false; fig_ext=".svg"; tab_width=10; tab_height=6;
-ffrs = fit(db, DBFitSpectra, fspkey)
+ffrs = fit_spectrum(db, DBCampaign, fspkey)
 res=asa(DataFrame, ffrs)
 ```
 
@@ -101,7 +101,7 @@ above unless a change in the fit algorithm has made it stale. (If no composition
 measured spectrum this table will be empty.)
 
 ```julia; echo=false; tab_width=13; tab_height=10;
-krs = findall(db, DBKRatio, fitspec=fspkey)
+krs = findall(db, DBKRatio, campaign=fspkey)
 if length(krs)>0
   try
     asa(DataFrame, krs, withComputedKs=true)

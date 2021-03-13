@@ -32,8 +32,9 @@ function openNeXLDatabase(filename::AbstractString)::SQLite.DB
         "person", "laboratory", "labmember", #
         "sample", "project", #
         "instrument", "detector", #
-        "artifact", "spectrum", "fitspectra", #
-        "kratio", "standardfor", "fscomment" #
+        "artifact", "spectrum", "fitspectrum", #
+        "referencespectrum", "campaign", #
+        "kratio", "standardfor", "campaigncomment" #
     )
     for tbl in tables
         if (!haskey(existing, :name)) || (!(uppercase(tbl) in existing.name))
@@ -52,11 +53,12 @@ include("sample.jl")
 include("artifact.jl")
 include("project.jl")
 include("spectrum.jl")
-include("fitspec.jl")
+include("referencespectrum.jl")
+include("fitspectrum.jl")
+include("campaign.jl")
+include("campaigncomment.jl")
 include("kratio.jl")
-include("helpers.jl")
 include("standardfor.jl")
-include("fscomment.jl")
 
 export DBPerson
 export DBLaboratory
@@ -69,7 +71,7 @@ export DBSample
 export DBProject
 export DBProjectSpectrum
 export find
-export DBFitSpectra
+export DBCampaign
 export DBFitSpectrum
 export DBReference
 export DBKRatio
@@ -78,6 +80,7 @@ export DBFSComment
 
 export measured, references, dbreferences
 export constructFitSpectra
+export disposition, disposition!
 
 function __init__()
     @require Gadfly = "c91e804a-d5a3-530f-b6f0-dfbca275c004" include("gadflysupport.jl")

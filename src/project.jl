@@ -1,6 +1,7 @@
 using Dates
 
 struct DBProject
+    database::SQLite.DB
     pkey::Int
     parent::Union{DBProject,Missing}
     createdBy::DBPerson
@@ -8,8 +9,9 @@ struct DBProject
     description::String
 end
 
-Base.show(io::IO, pr::DBProject) =
-    print(io, pr.name*(!ismissing(pr.parent) ? " <= "*repr(pr.parent) : ""))
+function Base.show(io::IO, pr::DBProject)
+    print(io, pr.name*(pr.parent.name != "Root" ? " <= "*repr(pr.parent) : ""))
+end
 
 Base.write(db::SQLite.DB, ::Type{DBProject}, name::String, desc::String, createdBy::DBPerson)::Int =
     write(db, DBProject, name, desc, createdBy.pkey, 0)
@@ -32,7 +34,7 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, pkey::Int)::DBProject
     r = SQLite.Row(q)
     # Recursively read parent projects
     parent = r[:PARENT] < 0 ? missing : read(db, DBProject, r[:PARENT])
-    return DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
+    return DBProject(db, r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject; createdBy=missing, name=missing, desc=missing)::Vector{DBProject}
@@ -52,7 +54,7 @@ function Base.findall(db::SQLite.DB, ::Type{DBProject}, parent::DBProject; creat
     end
     stmt1 = SQLite.Stmt(db, bs*";")
     q = DBInterface.execute(stmt1, args)
-    return [ DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION]) for r in q]
+    return [ DBProject(db, r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION]) for r in q]
 end
 
 Base.findall(db::SQLite.DB, ::Type{DBProject}, parentkey::Int)::Vector{DBProject} =
@@ -72,7 +74,7 @@ function Base.read(db::SQLite.DB, ::Type{DBProject}, parentkey::Int, name::Strin
     end
     r = SQLite.Row(q)
     parent = r[:PARENT] >= 0 ? read(db, DBProject, r[:PARENT]) : missing
-    return DBProject(r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
+    return DBProject(db, r[:PKEY], parent, read(db, DBPerson, r[:CREATEDBY]), r[:NAME], r[:DESCRIPTION])
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBProject}, createdby::DBPerson)::Vector{DBProject}

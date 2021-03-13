@@ -2,11 +2,11 @@ export has
 
 using IntervalSets
 
-function Base.write(db::SQLite.DB, mat::Material; atol=0.0, rtol=0.0001)::Int
+function Base.write(db::SQLite.DB, ::Type{Material}, mat::Material; atol=1.0e-4)::Int
     res = find(db, Material, mat.name)
     if res ≠ -1
         dbmat = read(db, Material, res)
-        if !isapprox(mat, dbmat, atol=atol, rtol=rtol)
+        if !isapprox(mat, dbmat, atol=atol)
             error("$(mat.name) has already been defined as $(mat).")
         end
     else
@@ -20,6 +20,8 @@ function Base.write(db::SQLite.DB, mat::Material; atol=0.0, rtol=0.0001)::Int
     end
     return res
 end
+
+Base.write(db::SQLite.DB, mat::Material; atol=1.0e-4) = write(db, Material, mat, atol=atol)
 
 function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
     stmt1 = SQLite.Stmt(db, "SELECT * FROM MATERIAL WHERE PKEY=?;")
@@ -45,7 +47,9 @@ function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
     if (!ismissing(desc)) && (lastindex(desc)>=1)
         props[:Description]=desc
     end
-    return Material(r1[:MATNAME], massfrac, aa, props)
+    mat = Material(r1[:MATNAME], massfrac, aa, props)
+    mat[:Database] = db
+    return mat
 end
 
 function find(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Int
