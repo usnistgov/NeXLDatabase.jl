@@ -80,6 +80,7 @@ export DBFSComment
 
 export measured, references, dbreferences
 export constructFitSpectra
+export disposition, disposition!
 
 function __init__()
     @require Gadfly = "c91e804a-d5a3-530f-b6f0-dfbca275c004" include("gadflysupport.jl")

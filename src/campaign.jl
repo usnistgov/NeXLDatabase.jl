@@ -7,6 +7,7 @@ both the unknown spectra and the reference spectra necessary to fit it as well a
 contextual data.
 """
 struct DBCampaign
+    database::SQLite.DB
     pkey::Int
     project::DBProject
     detector::DBDetector
@@ -46,6 +47,21 @@ function Base.show(io::IO, campaign::DBCampaign)
     for elm in campaign.elements
         print(io, "\n\t$(symbol(elm)) = $(join(dbreferences(campaign, elm),','))")
     end
+end
+
+function NeXLUncertainties.asa(::Type{DataFrame}, camps::AbstractVector{DBCampaign})
+    nm(m::Missing) = "Unknown"
+    nm(m::Material) = name(m)
+    DataFrame(
+        Key = [ camp.pkey for camp in camps ],
+        Material = [ camp.material for camp in camps ],
+        E0 = [ camp.fitspectrum[1].spectrum.beamenergy for camp in camps],
+        Unknowns = [ length(camp.fitspectrum) for camp in camps ],
+        References = [ join([ nm(ref.spectrum.composition) for ref in camp.refspectrum],", ") for camp in camps ],
+        Project = [ repr(camp.project) for camp in camps ],
+        Analyst = [ camp.project.createdBy.name for camp in camps ],
+        Disposition = [camp.disposition for camp in camps ],
+    )
 end
 
 """
@@ -98,7 +114,7 @@ function Base.read(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int)::DBCampaign
     for r2 in q2
         @assert r2[:CAMPAIGN] == campaign
         spec = read(db, DBSpectrum, r2[:SPECTRUM])
-        push!(tobefit, DBFitSpectrum(campaign, spec))
+        push!(tobefit, DBFitSpectrum(db, campaign, spec))
     end
     stmt3 = SQLite.Stmt(db, "SELECT * FROM REFERENCESPECTRUM WHERE CAMPAIGN=?;")
     q3 = DBInterface.execute(stmt3, (campaign,))
@@ -106,9 +122,13 @@ function Base.read(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int)::DBCampaign
     for r3 in q3
         @assert r3[:CAMPAIGN] == campaign
         spec = read(db, DBSpectrum, r3[:SPECTRUM])
-        push!(refs, DBReference(r3[:PKEY], r3[:CAMPAIGN], spec, _strtoelms(r3[:ELEMENTS])))
+        push!(refs, DBReference(db, r3[:PKEY], r3[:CAMPAIGN], spec, _strtoelms(r3[:ELEMENTS])))
     end
-    return DBCampaign(campaign, project, detector, elms, material, disposition, tobefit, refs)
+    return DBCampaign(db, campaign, project, detector, elms, material, disposition, tobefit, refs)
+end
+
+function kratios(campaign::DBCampaign, elm::Union{Element,Nothing}=nothing, mink::Float64=0.0)::Vector{DBKRatio}
+    return findall(campaign.database, DBKRatio, campaign=campaign.pkey, elm=elm, mink=mink)
 end
 
 """
@@ -128,6 +148,7 @@ function disposition(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int)
     end
     return SQLite.Row(q1)[:DISPOSITION]
 end
+disposition(camp::DBCampaign) = camp.disposition
 
 """
     disposition!(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int, value::String)
@@ -138,15 +159,15 @@ Sets the disposition of this set of fitted spectra.
   * `"Rejected: "*msg` - Rejected for the reason specified in `msg`
   * `"Accepted: "*msg` - Reviewed and accepted with optional `msg`
 """
-function disposition!(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int, value::String)
+function disposition!(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int, value::AbstractString)
     @assert isequal("Pending", value) || startswith(value, "Rejected") || startswith("Accepted") 
         "The disposition must be \"Pending\" or start with \"Rejected\" or \"Accepted\""
     stmt1 = SQLite.Stmt(db, "UPDATE CAMPAIGN SET DISPOSITION = ? WHERE PKEY=?;")
     DBInterface.execute(stmt1, (campaign, value))
     return value
 end
-function disposition!(db::SQLite.DB, ::Type{DBCampaign}, campaign::DBCampaign, value::String)
-    return disposition!(db, DBCampaign, campaign.pkey, value)
+function disposition!(campaign::DBCampaign, value::AbstractString)
+    return disposition!(campaign.database, DBCampaign, campaign.pkey, value)
 end
 
 
@@ -161,14 +182,24 @@ function Base.delete!(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int)
     DBInterface.execute(stmt1, (campaign,))
 end
 
+function Base.delete!(campaign::DBCampaign)
+    delete!(campaign.database, DBCampaign, campaign.pkey)
+end
+
 function NeXLUncertainties.asa(::Type{DataFrame}, db::SQLite.DB, ::Type{DBCampaign})
     stmt1 = SQLite.Stmt(db, "SELECT PKEY FROM CAMPAIGN")
     q1 = DBInterface.execute(stmt1)
     return SQLite.done(q1) ? DataFrame() : asa(DataFrame, [ read(db, DBCampaign, row[:PKEY]) for row in res ])
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBCampaign}; project::Union{DBProject,Missing} = missing, det::Union{DBDetector,Missing}=missing)::Vector{DBCampaign}
+function Base.findall(db::SQLite.DB, ::Type{DBCampaign}; material::Union{String,Missing}=missing, project::Union{DBProject,Missing} = missing, det::Union{DBDetector,Missing}=missing)::Vector{DBCampaign}
     keys, args = String[], Any[]
+    if !ismissing(material)
+        matkey = find(db, Material, material)
+        @assert matkey!=-1 "Unable to find the material named `$material`."
+        push!(keys, "MATKEY=?")
+        push!(args, matkey)
+    end
     if !ismissing(project)
         push!(keys,"PROJECT=?")
         push!(args, project.pkey)
@@ -183,20 +214,6 @@ function Base.findall(db::SQLite.DB, ::Type{DBCampaign}; project::Union{DBProjec
     stmt=SQLite.Stmt(db, "SELECT PKEY FROM CAMPAIGN WHERE $(join(keys," AND "));")
     q1 = DBInterface.execute(stmt, args)
     return [ read(db, DBCampaign, r[:PKEY] ) for r in q1 ]
-end
-
-
-function NeXLUncertainties.asa(::Type{DataFrame}, campaigns::AbstractArray{DBCampaign})
-    pkeys = unique(campaign.pkey for campaign in campaigns)
-    dedup = [ campaigns[findfirst(campaign->campaign.pkey==pk, campaigns)] for pk in pkeys ]
-    return DataFrame(
-        PKey=[ campaign.pkey for campaign in dedup ], 
-        Project=[ campaign.project.name for campaign in dedup ], 
-        Analyst=[ campaign.project.createdBy.name for campaign in dedup ], 
-        Elements=[ _elmstostr(campaign.elements) for campaign in dedup ], 
-        Material=[ campaign.material for campaign in dedup ], 
-        Disposition= [ campaign.disposition for campaign in dedup ]
-    )
 end
 
 """
@@ -265,7 +282,7 @@ Fit a collection of spectra from the database against the reference spectra asso
 `unkcomp` is provided then previous k-ratio results are deleted and the new k-ratio results are written to the database.
 """
 function NeXLSpectrum.fit_spectrum(db::SQLite.DB, ::Type{DBCampaign}, campaign::Int, unkcomp::Union{Material, Missing}=missing; update::Bool=true)::Vector{FilterFitResult}
-    fs = read(db, NeXLDatabase.DBCampaign, campaign)
+    fs = read(db, DBCampaign, campaign)
     unks = measured(fs)
     det = convert(BasicEDS, fs.detector)
     refs =  NeXLSpectrum.ReferencePacket[]

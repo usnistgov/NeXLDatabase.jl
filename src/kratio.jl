@@ -1,6 +1,7 @@
 using NeXLMatrixCorrection
 
 struct DBKRatio
+    database::SQLite.DB
     pkey::Int
     campaign::Int
     spectrum::Int
@@ -34,11 +35,17 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     end
     ref = Dict{Symbol,Any}(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
     kr = uv(r[:KRATIO], r[:DKRATIO])
-    return DBKRatio(pkey, r[:CAMPAIGN], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
+    return DBKRatio(db, pkey, r[:CAMPAIGN], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
 end
 
-function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; campaign::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
+function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; material::Union{String,Nothing}=nothing, campaign::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
     bs, args = "KRATIO >= ?", [ mink, ]
+    if !isnothing(material)
+        matkey = find(db, Material, material)
+        @assert matkey!=-1 "Unable to find the material `$material`."
+        bs *= " AND MEASURED = ?"
+        push!(args, matkey)
+    end
     if !isnothing(campaign)
         bs *= " AND CAMPAIGN = ?"
         push!(args, campaign)
@@ -88,7 +95,7 @@ function NeXLUncertainties.asa(
                 zs = zafcorrection(mc, fc, cc, meascomp[end], br, mease0[end])
                 zr = zafcorrection(mc, fc, cc, refcomp[end], br, refe0[end])
                 k =
-                    gZAFc(zs, zr, meastoa[end], reftoa[end]) * NeXLCore.nonneg(meascomp[end], elm) /
+                    gZAFc(zs, zr, meastoa[end], reftoa[end] ) * NeXLCore.nonneg(meascomp[end], elm) /
                     NeXLCore.nonneg(refcomp[end], elm)
                 push!(cks, k)
                 push!(ratio, value(kr.kratio) / k)

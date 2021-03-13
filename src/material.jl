@@ -47,7 +47,9 @@ function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
     if (!ismissing(desc)) && (lastindex(desc)>=1)
         props[:Description]=desc
     end
-    return Material(r1[:MATNAME], massfrac, aa, props)
+    mat = Material(r1[:MATNAME], massfrac, aa, props)
+    mat[:Database] = db
+    return mat
 end
 
 function find(db::SQLite.DB, ::Type{Material}, matname::AbstractString)::Int

@@ -1,4 +1,5 @@
 struct DBReference
+    database::SQLite.DB
     pkey::Int
     campaign::Int
     spectrum::DBSpectrum

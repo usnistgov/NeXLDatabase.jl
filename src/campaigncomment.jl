@@ -1,5 +1,6 @@
 
 struct DBFSComment 
+    database::SQLite.DB
     pkey::Int
     campaign::DBCampaign
     person::DBPerson
@@ -14,6 +15,7 @@ function Base.write(db::SQLite.DB, ::Type{DBFSComment}, campaign::Int, dbp::DBPe
     return DBInterface.lastrowid(q)
 end
 function Base.write(db::SQLite.DB, ::Type{DBFSComment}, campaign::DBCampaign, dbp::DBPerson, comment::String)
+    @assert db == campaign.database "Must write comments to the same database as the campaign."
     write(db, DBFSComment, campaign.pkey, dbp, comment)
 end
 
@@ -24,7 +26,7 @@ function Base.read(db::SQLite.DB, ::Type{DBFSComment}, campaign::DBCampaign)::Ve
     while !SQLite.done(q)
         r = SQLite.Row(q)
         @assert r[:CAMPAIGN] == campaign.pkey
-        c = DBFSComment(r[:PKEY], campaign, read(db, DBPerson, r[:PERSON]), Dates.julian2datetime(r[:DATETIME]), r[:COMMENT])
+        c = DBFSComment(db, r[:PKEY], campaign, read(db, DBPerson, r[:PERSON]), Dates.julian2datetime(r[:DATETIME]), r[:COMMENT])
         push!(res, c)
     end
     return res

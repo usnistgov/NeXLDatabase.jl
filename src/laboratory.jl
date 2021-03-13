@@ -1,5 +1,6 @@
 
 struct DBLaboratory
+    database::SQLite.DB
     pkey::Int
     name::String
     contact::DBPerson
@@ -26,7 +27,7 @@ function Base.read(db::SQLite.DB, ::Type{DBLaboratory}, pkey::Int)::DBLaboratory
     end
     r = SQLite.Row(q)
     contact = read(db, DBPerson, r[:CONTACT])
-    return DBLaboratory(r[:PKEY], r[:NAME], contact)
+    return DBLaboratory(db, r[:PKEY], r[:NAME], contact)
 end
 
 function Base.findall(db::SQLite.DB,::Type{DBLaboratory})::Vector{DBLaboratory}

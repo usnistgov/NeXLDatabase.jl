@@ -1,4 +1,5 @@
 struct DBSpectrum
+    database::SQLite.DB
     pkey::Int
     detector::DBDetector
     beamenergy::Float64
@@ -70,7 +71,7 @@ function Base.read(db::SQLite.DB, ::Type{DBSpectrum}, pkey::Int)::DBSpectrum
     samp = read(db, DBSample, r[:SAMPLE])
     art = read(db, DBArtifact, r[:ARTIFACT])
     acq = Dates.julian2datetime(r[:COLLECTED])
-    return DBSpectrum( r[:PKEY], det, r[:BEAMENERGY], mat, colby, samp, acq, r[:NAME], art)
+    return DBSpectrum(db, r[:PKEY], det, r[:BEAMENERGY], mat, colby, samp, acq, r[:NAME], art)
 end
 
 function NeXLUncertainties.asa(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
@@ -84,31 +85,4 @@ function NeXLUncertainties.asa(::Type{Spectrum}, dbspec::DBSpectrum)::Spectrum
         res[:Composition] = dbspec.composition
     end
     return res
-end
-
-struct DBProjectSpectrum
-    pkey::Int
-    project::Int
-    spectrum::Int
-end
-
-function Base.write(db::SQLite.DB, ::Type{DBProjectSpectrum}, projectkey::Int, spectrumkey::Int)::Int
-    stmt1 = SQLite.Stmt(db, "INSERT INTO PROJECTSPECTRUM ( PROJECT, SPECTRUM ) VALUES ( ?, ?)")
-    q = DBInterface.execute(stmt1, ( projectkey, spectrumkey ))
-    return DBInterface.lastrowid(q)
-end
-
-Base.write(db::SQLite.DB, ::Type{DBProjectSpectrum}, project::DBProject, spectrum::DBSpectrum)::Int =
-    write(db, DBProjectSpectrum, project.pkey, spectrum.pkey)
-
-function Base.read(db::SQLite.DB, ::Type{DBProject}, ::Type{DBProjectSpectrum}, projectkey::Int)::Vector{DBProjectSpectrum}
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM PROJECTSPECTRUM WHERE PROJECT=?;")
-    q = DBInterface.execute(stmt1, ( parent.pkey, ))
-    return [ DBProjectSpectrum(r[:PKEY], r[:PROJECT], r[:SPECTRUM]) for r in q ]
-end
-
-function Base.read(db::SQLite.DB, ::Type{DBProject}, ::Type{DBSpectrum}, projectkey::Int)::Vector{DBSpectrum}
-    stmt1 = SQLite.Stmt(db, "SELECT * FROM PROJECTSPECTRUM WHERE PROJECT=?;")
-    q = DBInterface.execute(stmt1, ( projectkey, ))
-    return [ read(db, DBSpectrum, r[:SPECTRUM]) for r in q ]
 end

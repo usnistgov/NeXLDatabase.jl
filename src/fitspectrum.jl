@@ -3,6 +3,7 @@ using NeXLCore
 using IntervalSets
 
 struct DBFitSpectrum
+    database::SQLite.DB
     campaign::Int
     spectrum::DBSpectrum
 end

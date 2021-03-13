@@ -57,7 +57,7 @@ asa(DataFrame, fs.refspectrum)
 The k-ratio is the ratio of the intensity in the measured to the intensity in the reference for a specific set of
 characteristic x-ray lines.
 ```julia; echo=false; fig_ext=".svg"; tab_width=10; tab_height=6;
-ffrs = fit(db, DBCampaign, fspkey)
+ffrs = fit_spectrum(db, DBCampaign, fspkey)
 res=asa(DataFrame, ffrs)
 ```
 

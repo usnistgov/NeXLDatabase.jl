@@ -1,5 +1,6 @@
 
 struct DBSample
+    database::SQLite.DB
     pkey::Int
     parent::Union{DBSample,Missing}
     owner::DBLaboratory
@@ -74,5 +75,5 @@ function Base.read(db::SQLite.DB, ::Type{DBSample}, pkey::Int)
     r=SQLite.Row(q)
     parent = r[:PARENT] ≠ -1 ? read(db, DBSample, r[:PARENT]) : missing
     owner = read(db, DBLaboratory, r[:OWNER])
-    return DBSample( r[:PKEY], parent, owner, r[:NAME], r[:DESCRIPTION])
+    return DBSample(db, r[:PKEY], parent, owner, r[:NAME], r[:DESCRIPTION])
 end

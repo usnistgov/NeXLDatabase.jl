@@ -33,14 +33,15 @@ function plot_ratio(
     cc::Type{<:CoatingCorrection} = Coating,
 )
   df = asa(DataFrame, dbkrs, withComputedKs=true, mc=mc, fc=fc, cc=cc)
-  df[:, "Element"] = symbol.(element.(brightest.(df[:,"Lines"]))) 
-  df[:, "Z"] = z.(element.(brightest.(df[:,"Lines"])))
+  df[:, "Element"] = symbol.(element.(first.(df[:,"Lines"]))) 
+  df[:, "Z"] = z.(element.(first.(df[:,"Lines"])))
   df[:, "Family"] = name.(df[:,"Lines"], true)
   df[:, "RU"] = map(r->uv(r["K"],r["ΔK"])/r["Kxpp"], eachrow(df))
   df[:, "Rmin"] = map(r-> value(r["RU"])-σ(r["RU"]), eachrow(df))
   df[:, "Rmax"] = map(r-> value(r["RU"])+σ(r["RU"]), eachrow(df))
   df[:,"Measurement"] = map(r->"$(name(r["Cmeas"])) at $(r["E0meas"]/1000.0) keV", eachrow(df))
   df[:,"Rand"] = rand(nrow(df)) # To plot points in a randomized order.
+  filter!(r->element(first(r[:Lines])) in keys(r[:Cmeas]), df)
   sort!(df, [:Family, :E0meas, :Z, :Rand])
   # yin, yax = something(ymin, 0.9*minimum(skipmissing(df[:,"Rmin"]))), something(ymax, 1.1*maximum(skipmissing(df[:,"Rmax"])))
   plot(df, xgroup="Family", x="Element", ymin="Rmin", ymax="Rmax", y="Ratio", color="Measurement", 
@@ -91,7 +92,6 @@ function plot_xy(
         abline, intercept=[0.0],slope=[1.0],
     )
 end
-
 
 function plot2(dbkrs::AbstractArray{DBKRatio}; palette = NeXLPalette)
     kok, dkok, color = Float64[], Float64[], Color[]
