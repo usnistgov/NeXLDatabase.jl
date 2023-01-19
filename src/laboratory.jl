@@ -33,7 +33,7 @@ end
 function Base.findall(db::SQLite.DB,::Type{DBLaboratory})::Vector{DBLaboratory}
     stmt1 = SQLite.Stmt(db, "SELECT * FROM LABORATORY;")
     q = DBInterface.execute(stmt1)
-    return [ DBLaboratory(r[:PKEY], r[:NAME], read(db, DBPerson, r[:CONTACT])) for r in q]
+    return [ DBLaboratory(db, r[:PKEY], r[:NAME], read(db, DBPerson, r[:CONTACT])) for r in q]
 end
 
 struct DBMember

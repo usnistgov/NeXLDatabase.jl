@@ -15,7 +15,7 @@ end
 zip = artifact"shooter0"
 dbname = ":memory:"
 # dbname = "C:\\Users\\nritchie\\Desktop\\test.db" # tempname()
-(dbname!=":memory:") && (rm(dbname, force=true)==nothing)
+(dbname!=":memory:") && isnothing(rm(dbname, force=true))
 db = openNeXLDatabase(dbname)
 ld1 = write(db, DBPerson, "Butterbean Q. Grenfeld, III", "bqg@gmail.com")
 ld2 = write(db, DBPerson, "Jeanne I. Bottle", "jib@gmail.com")
@@ -79,7 +79,7 @@ end
             joinpath(joinpath(@__DIR__, "spectra"), mat * " std.msa"),
             "EMSA",
         )
-        write(db, NeXLDatabase.DBProjectSpectrum, proj.pkey, sidx)
+        write(db, NeXLDatabase.DBFitSpectrum, proj.pkey, sidx)
     end
     @testset "Base DB" begin
         @test isapprox(value(k240[n"Ba"]), 0.2687, atol = 0.000001)
@@ -118,7 +118,7 @@ end
                 joinpath(joinpath(@__DIR__, "spectra"), "03272.tif"),
                 "ASPEX",
             )
-            write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
+            write(db, NeXLDatabase.DBFitSpectrum, proj, sidx)
 
             specs = read(db, DBProject, DBSpectrum, proj)
             @test length(specs) == 1
@@ -140,7 +140,7 @@ end
                     joinpath(zip,fn),
                     "ASPEX",
                 )
-                write(db, NeXLDatabase.DBProjectSpectrum, proj, sidx)
+                write(db, NeXLDatabase.DBFitSpectrum, proj, sidx)
             end
         end
         spec = asa(Spectrum, read(db, DBSpectrum, 95))

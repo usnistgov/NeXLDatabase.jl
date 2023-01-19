@@ -14,7 +14,7 @@ export openNeXLDatabase
 function openNeXLDatabase(filename::AbstractString)::SQLite.DB
     function stripcomment(ss)
         i=findfirst("--",ss)
-        return i == nothing ? ss : ss[1:i.start-1]
+        return isnothing(i) ? ss : ss[1:i.start-1]
     end
     function buildTable(tbl)
         path = dirname(pathof(@__MODULE__))

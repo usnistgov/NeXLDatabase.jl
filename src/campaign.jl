@@ -222,9 +222,7 @@ end
         ::Type{DBCampaign}, #
         campaign::Int; #
         strip::AbstractVector{Element} = Element[],
-        mc::Type{<:MatrixCorrection} = XPP,
-        fl::Type{<:FluorescenceCorrection} = ReedFluorescence,
-        cc::Type{<:CoatingCorrection} = Coating,
+		iteration::Iterator = Iterator(XPP,ReedFluorescence,Coating),
         kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
     )::Vector{IterationResult}
 

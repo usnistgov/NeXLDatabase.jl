@@ -82,7 +82,7 @@ display(HTML("<p>Estimate the composition that would produce the measured k-rati
 ```
 
 ```julia; echo=false;
-qr = map(ffr->quantify(ffr,strip=[n"C"], mc = alg), ffrs);
+qr = map(ffr->quantify(ffr,strip=[n"C"], iteration = Iteration(mc=alg, cc=NoCoating)), ffrs);
 nothing
 ```
 ```julia; echo=false; fig_ext=".svg"; fig_width=10; fig_height=6;

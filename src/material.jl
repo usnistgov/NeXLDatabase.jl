@@ -33,10 +33,10 @@ function Base.read(db::SQLite.DB, ::Type{Material}, pkey::Int)::Material
     row, den, desc = r1[:PKEY], r1[:MATDENSITY], r1[:MATDESCRIPTION]
     stmt2 = SQLite.Stmt(db, "SELECT * FROM MASSFRACTION WHERE MATKEY=?;")
     q2 = DBInterface.execute(stmt2, (row, ))
-    massfrac, aa = Dict{Int,UncertainValue}(), Dict{Int,Float64}()
+    massfrac, aa = Dict{Element,UncertainValue}(), Dict{Element,Float64}()
     for r2 in q2
         @assert r2[:MATKEY]==row
-        z, c, uc, a = r2[:MFZ], r2[:MFC], r2[:MFUC], r2[:MFA]
+        z, c, uc, a = elements[r2[:MFZ]], r2[:MFC], r2[:MFUC], r2[:MFA]
         massfrac[z] = uv(c,uc)
         a>0.0 && (aa[z]=a)
     end
@@ -95,7 +95,7 @@ function Base.filter(db::SQLite.DB, ::Type{Material}, filt::Dict{Element, Closed
         push!(cmds, "SELECT MATKEY FROM MASSFRACTION WHERE MFZ=? AND MFC>=? and MFC<=?")
         append!(args, [ z(elm), minimum(ci), maximum(ci) ])
     end
-    stmt = SQLite.Stmt(db, join(cmdsol," INTERSECT ")*";")
+    stmt = SQLite.Stmt(db, join(cmds," INTERSECT ")*";")
     q = DBInterface.execute(stmt, args)
     return [ read(db, Material, r[:MATKEY]) for r in q ]
 end

@@ -6,7 +6,7 @@ struct DBKRatio
     campaign::Int
     spectrum::Int
     primary::CharXRay
-    lines::Vector{CharXRay}
+    xrays::Vector{CharXRay}
     mode::String
     measured::Dict{Symbol,Any}
     reference::Dict{Symbol,Any}
@@ -14,7 +14,7 @@ struct DBKRatio
 end
 
 function Base.show(io::IO, kr::DBKRatio)
-    print( io, "$(krname(kr)): $(kr.lines)] = $(kr.kratio)")
+    print( io, "$(krname(kr)): $(kr.xrays)] = $(kr.kratio)")
 end
 
 function krname(kr::DBKRatio)
@@ -28,14 +28,14 @@ function Base.read(db::SQLite.DB, ::Type{DBKRatio}, pkey::Int)::DBKRatio
     SQLite.done(q) && error("There is no k-ratio with pkey = $(pkey).")
     r = SQLite.Row(q)
     primary = CharXRay(r[:ELEMENT], Transition(SubShell(r[:INNER]), SubShell(r[:OUTER])))
-    lines = map(s -> parse(CharXRay, s), split(r[:LINES], ","))
+    xrays = map(s -> parse(CharXRay, s), split(r[:LINES], ","))
     meas = Dict{Symbol,Any}(:BeamEnergy => r[:MEASE0], :TakeOffAngle => r[:MEASTOA])
     if r[:MEASURED] != -1
         meas[:Composition] = read(db, Material, r[:MEASURED])
     end
     ref = Dict{Symbol,Any}(:BeamEnergy => r[:REFE0], :TakeOffAngle => r[:REFTOA], :Composition => read(db, Material, r[:REFERENCE]))
     kr = uv(r[:KRATIO], r[:DKRATIO])
-    return DBKRatio(db, pkey, r[:CAMPAIGN], r[:SPECPKEY], primary, lines, r[:MODE], meas, ref, kr)
+    return DBKRatio(db, pkey, r[:CAMPAIGN], r[:SPECPKEY], primary, xrays, r[:MODE], meas, ref, kr)
 end
 
 function Base.findall(db::SQLite.DB, ::Type{DBKRatio}; material::Union{String,Nothing}=nothing, campaign::Union{Int,Nothing}=nothing, elm::Union{Element,Nothing}=nothing, mink::Float64=0.1)::Vector{DBKRatio}
@@ -68,11 +68,11 @@ function NeXLUncertainties.asa(
     cc::Type{<:CoatingCorrection} = Coating
 )
     fm, sm, cm = Union{Float64,Missing}, Union{String,Missing}, Union{Material,Missing}
-    fs, lines, mease0, meastoa, meascomp = Int[], Vector{CharXRay}[], Float64[], Float64[], cm[]
+    fs, xrays, mease0, meastoa, meascomp = Int[], Vector{CharXRay}[], Float64[], Float64[], cm[]
     refe0, reftoa, refcomp, krv, dkrv, cks, ratio = Float64[], Float64[], cm[], Float64[], Float64[], fm[], fm[]
     for kr in krs
         push!(fs, kr.campaign)
-        push!(lines, kr.lines)
+        push!(xrays, kr.xrays)
         meas = kr.measured
         push!(mease0, get(meas, :BeamEnergy, missing))
         push!(meastoa, get(meas, :TakeOffAngle, missing))
@@ -84,7 +84,7 @@ function NeXLUncertainties.asa(
         push!(krv, value(kr.kratio))
         push!(dkrv, σ(kr.kratio))
         if withComputedKs
-            elm = element(kr.lines[1])
+            elm = element(kr.xrays[1])
             if any(ismissing.((meascomp[end], mease0[end], meastoa[end], refcomp[end], refe0[end], reftoa[end]))) ||
                (NeXLCore.nonneg(meascomp[end], elm) < 1.0e-6) ||
                (NeXLCore.nonneg(refcomp[end], elm) < 1.0e-6) || (energy(inner(kr.primary))>0.95*min(mease0[end],refe0[end]))
@@ -104,7 +104,7 @@ function NeXLUncertainties.asa(
     end
     res = DataFrame(
         Campaign = fs,
-        Lines = lines,
+        Lines = xrays,
         Cmeas = meascomp,
         E0meas = mease0,
         TOAmeas = meastoa,
@@ -122,7 +122,7 @@ function NeXLUncertainties.asa(
 end
 
 NeXLUncertainties.asa(::Type{KRatio}, dbkr::DBKRatio)::KRatio =
-    KRatio(dbkr.lines, dbkr.measured, dbkr.reference, dbkr.reference[:Composition], dbkr.kratio)
+    KRatio(dbkr.xrays, dbkr.measured, dbkr.reference, dbkr.reference[:Composition], dbkr.kratio)
 
 function Base.write(
     db::SQLite.DB,
@@ -175,11 +175,8 @@ end
     NeXLMatrixCorrection.quantify(#
         krs::AbstractVector{DBKRatio};
         strip::AbstractVector{Element} = Element[],
-        mc::Type{<:MatrixCorrection} = XPP,
-        fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
-        cc::Type{<:CoatingCorrection} = Coating,
+        iteration::Iteration = Iteration(XPP, ReedFluorescence, Coating),
         kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
-        unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
     )::Vector{IterationResult}
 
 Quantify a collection of `DBKRatio`.
@@ -187,16 +184,12 @@ Quantify a collection of `DBKRatio`.
 function NeXLMatrixCorrection.quantify(#
     krs::AbstractVector{DBKRatio};
     strip::AbstractVector{Element} = Element[],
-    mc::Type{<:MatrixCorrection} = XPP,
-    fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
-    cc::Type{<:CoatingCorrection} = Coating,
+    iteration::Iteration = Iteration(),
     kro::KRatioOptimizer = SimpleKRatioOptimizer(1.5),
-    unmeasured::UnmeasuredElementRule = NullUnmeasuredRule(),
 )::Vector{IterationResult}
-    iter = Iteration(mc, fc, cc, unmeasured = unmeasured)
     map(unique(kr.spectrum for kr in krs)) do spec
         skrs = asa.(KRatio, filter(kr->kr.spectrum==spec, krs))
         okrs = optimizeks(kro, filter(kr -> !(element(kr) in strip), skrs))
-        quantify(iter, label("Unknown[$spec]"), okrs)
+        quantify(iteration, label("$spec"), okrs)
     end
 end

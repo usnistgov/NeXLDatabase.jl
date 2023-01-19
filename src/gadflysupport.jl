@@ -21,9 +21,10 @@ function Gadfly.plot(
 )
     if style==:Ratio
         plot_ratio(dbkrs, mc, fc, cc)
-    else
+    elseif style==:XY
         plot_xy(dbkrs, mc, fc)
-    end
+    else
+        plot(map(kr->asa(KRatio, kr), krs), mc, fc)
 end
 
 function plot_ratio(
@@ -32,14 +33,16 @@ function plot_ratio(
     fc::Type{<:FluorescenceCorrection} = ReedFluorescence,
     cc::Type{<:CoatingCorrection} = Coating,
 )
+  name(m::Missing) = "Unknown"
+  name(vc::AbstractVector{CharXRay}) = NeXLCore.name(vc, true)
   df = asa(DataFrame, dbkrs, withComputedKs=true, mc=mc, fc=fc, cc=cc)
   df[:, "Element"] = symbol.(element.(first.(df[:,"Lines"]))) 
   df[:, "Z"] = z.(element.(first.(df[:,"Lines"])))
-  df[:, "Family"] = name.(df[:,"Lines"], true)
+  df[:, "Family"] = name.(df[:,"Lines"])
   df[:, "RU"] = map(r->uv(r["K"],r["ΔK"])/r["Kxpp"], eachrow(df))
   df[:, "Rmin"] = map(r-> value(r["RU"])-σ(r["RU"]), eachrow(df))
   df[:, "Rmax"] = map(r-> value(r["RU"])+σ(r["RU"]), eachrow(df))
-  df[:,"Measurement"] = map(r->"$(name(r["Cmeas"])) at $(r["E0meas"]/1000.0) keV", eachrow(df))
+  df[:,"Measurement"] = map(r->"$(NeXLCore.name(r["Cmeas"])) at $(r["E0meas"]/1000.0) keV using $(NeXLCore.name(r["Cref"]))", eachrow(df))
   df[:,"Rand"] = rand(nrow(df)) # To plot points in a randomized order.
   filter!(r->element(first(r[:Lines])) in keys(r[:Cmeas]), df)
   sort!(df, [:Family, :E0meas, :Z, :Rand])
@@ -72,7 +75,7 @@ function plot_xy(
                 push!(y, value(kr.kratio))
                 push!(dy, σ(kr.kratio))
                 push!(x, kc)
-                push!(color, "$(symbol(kr.element)) $(name(shell(brightest(kr.lines)))) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV")
+                push!(color, "$(symbol(kr.element)) $(name(shell(brightest(kr.xrays)))) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV")
             catch c
                 @info "Failed on $dbkr - $c"
             end
@@ -101,7 +104,7 @@ function plot2(dbkrs::AbstractArray{DBKRatio}; palette = NeXLPalette)
         kr, unkComp = asa(KRatio, dbkr), get(dbkr.measured, :Composition, missing)
         push!(kok, value(kr.kratio))
         push!(dkok, σ(kr.kratio))
-        push!(ygroup, brightest(kr.lines))
+        push!(ygroup, brightest(kr.xrays))
         matname = "$(kr.element) in $(name(unkComp)) $(kr.unkProps[:BeamEnergy]/1000.0) keV"
         if !haskey(matcolors, matname)
             matcolors[matname] = palette[length(matcolors)+1]
@@ -116,7 +119,7 @@ function plot2(dbkrs::AbstractArray{DBKRatio}; palette = NeXLPalette)
         color = color,
         ygroup = ygroup, # Geom.errorbar, Stat.x_jitter(range=0.8),
         Geom.subplot_grid(Geom.errorbar, free_y_axis = true),
-        Scale.ygroup(labels = cxr -> repr(cxr), levels = allcxrs),
+        Scale.ygroup(labels = cxr -> repr(cxr), levels = unique(ygroup)),
         Guide.manual_color_key("Material", collect(keys(matcolors)), collect(values(matcolors))), # Guide.yrug,
         Guide.xlabel("Index"),
         Guide.ylabel("k[Measured]"),
@@ -125,11 +128,10 @@ end
 
 function plot3(
     krs::AbstractArray{DBKRatio};
-    known::Union{Material,Missing} = missing,
     label::AbstractString = "Material",
     palette = NeXLPalette,
 )
-    mats = unique(collect(map(dbkr->get(dbkr.measured,:Composition,missing), krs)))
+    mats = unique(collect(dropmissing(map(dbkr->get(dbkr.measured,:Composition,missing), krs))))
     allelms = sort(convert(Vector{Element}, collect(union(map(keys, mats)...))))
     elmcol = Dict(elm => palette[i] for (i, elm) in enumerate(allelms))
     xs, ymin, ymax, ygroups, colors = String[], Float64[], Float64[], Element[], Color[]
@@ -152,4 +154,8 @@ function plot3(
         Guide.xlabel(label),
         Guide.ylabel("Mass Fraction by Element"),
     )
+end
+
+function plot4(krs::AbstractArray{DBKRatio})
+    
 end
